@@ -1,4 +1,4 @@
-// Generated from oeg\u005Cupm\solidityantlr\Solidity.g4 by ANTLR 4.9.2
+// Generated from oeg/upm/solidityantlr/Solidity.g4 by ANTLR 4.9.2
 package oeg.upm.solidityantlr;
 
 import org.antlr.v4.runtime.ParserRuleContext;
