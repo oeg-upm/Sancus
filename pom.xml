@@ -214,7 +214,24 @@
 					</execution>
 				</executions>
 			</plugin> -->
-			<plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <fork>true</fork>
+                    <mainClass>${start-class}</mainClass>
+                </configuration>
+                  <executions>
+                    <execution>
+                      <goals>
+                        <goal>repackage</goal>
+                      </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+		<!--	<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>3.1.1</version>
@@ -222,6 +239,15 @@
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
+					
+					        <archive>
+          <manifest>
+            <addClasspath>true</addClasspath>
+            <classpathPrefix>lib/</classpathPrefix>
+            <mainClass>sancus.SancusProjectApplication</mainClass>
+          </manifest>
+        </archive>
+					
 				</configuration>
 				<executions>
 					<execution>
@@ -232,8 +258,7 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>
-
+			</plugin>-->
 		</plugins>
 	</build>
 </project>
