@@ -1,0 +1,76 @@
+{
+  "@context": {
+    "implementsFunction": {
+      "@id": "http://ethon.consensys.net/Contracts/implementsFunction",
+      "@type": "@id",
+      "@context": {
+        "signature": {
+          "@id": "http://ethon.consensys.net/Contracts/signature",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "hasOutput": {
+          "@id": "http://ethon.consensys.net/Contracts/hasOutput",
+          "@type": "@id"
+        },
+        "hasFunctionSelector": {
+          "@id": "http://ethon.consensys.net/Contracts/hasFunctionSelector",
+          "@type": "@id",
+          "@context": {
+            "canonicalSignature": {
+              "@id": "http://ethon.consensys.net/Contracts/canonicalSignature",
+              "@type": "http://www.w3.org/2001/XMLSchema#string"
+            },
+            "byteSignature": {
+              "@id": "http://ethon.consensys.net/Contracts/byteSignature",
+              "@type": "http://www.w3.org/2001/XMLSchema#hexBinary"
+            }
+          }
+        },
+        "isPayable": {
+          "@id": "http://ethon.consensys.net/Contracts/isPayable",
+          "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+        },
+        "isConstant": {
+          "@id": "http://ethon.consensys.net/Contracts/isConstant",
+          "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+        }
+      }
+    },
+    "usesOpcode": {
+      "@id": "http://ethon.consensys.net/Contracts/usesOpcode",
+      "@type": "@id",
+      "@context": {
+        "stackItemsAdded": {
+          "@id": "http://ethon.consensys.net/Contracts/stackItemsAdded",
+          "@type": "http://www.w3.org/2001/XMLSchema#integer"
+        },
+        "cost": {
+          "@id": "http://ethon.consensys.net/Contracts/cost",
+          "@type": "http://www.w3.org/2001/XMLSchema#integer"
+        },
+        "hexValue": {
+          "@id": "http://ethon.consensys.net/Contracts/hexValue",
+          "@type": "http://www.w3.org/2001/XMLSchema#hexBinary"
+        },
+        "stackItemsRemoved": {
+          "@id": "http://ethon.consensys.net/Contracts/stackItemsRemoved",
+          "@type": "http://www.w3.org/2001/XMLSchema#integer"
+        }
+      }
+    },
+    "implementsEvent": {
+      "@id": "http://ethon.consensys.net/Contracts/implementsEvent",
+      "@type": "@id",
+      "@context": {
+        "isAnonymous": {
+          "@id": "http://ethon.consensys.net/Contracts/isAnonymous",
+          "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+        },
+        "topic": {
+          "@id": "http://ethon.consensys.net/Contracts/topic",
+          "@type": "http://www.w3.org/2001/XMLSchema#hexBinary"
+        }
+      }
+    }
+  }
+}
