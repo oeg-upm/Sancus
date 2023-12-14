@@ -12,13 +12,6 @@ public class EthereumDataProvider {
 	private EthereumBlockExtractor results = new EthereumBlockExtractor();
 	public static Web3jConnector web3j = new Web3jConnector();
 
-	/**
-	 * Constructor. 
-	 */
-	public EthereumDataProvider(){
-		web3j.setDecoder(false);
-	}
-
 	public String retrieveBlock(ChainExtractorModel block) {
 		try {
 			String result = null;
@@ -26,14 +19,11 @@ public class EthereumDataProvider {
 				web3j.setConnection(Web3j.build(new HttpService(block.getUrl())));
 			}
 			result =results.BlockhainExtractor(BigInteger.valueOf(block.getBlock()));
-			if(block.isDecode()) {
-				web3j.setDecoder(true);
-			}
 			return result;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return null;
+		return "[\"result\": \"error\"]";
 	}
 
 }

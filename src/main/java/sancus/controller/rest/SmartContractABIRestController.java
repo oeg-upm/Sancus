@@ -31,16 +31,12 @@ public class SmartContractABIRestController {
 	 * @param response
 	 * @param options
 	 */
-	@ApiOperation(value = "Translate custom contract in JSON-LD", notes = "Add some information")
+	@ApiOperation(value = "Translate an ABI contract to JSON-LD 1.1", notes = "Add some information")
 	@RequestMapping(value="/solidityABI/ABItoRDF", method = RequestMethod.POST, consumes="application/json")
 	@ResponseBody
 	public String translateContract(HttpServletRequest request, HttpServletResponse response, @RequestBody(required=true) @Valid BlockchainSmartContract contract) {
 		String block = null;
-		if(contract.isConvertToRDF()) {
-			block = scABIProvider.getABIContractRDF(contract);
-		}else {
-			block = scABIProvider.getABIContractJSONLD(contract);
-		}
+		block = scABIProvider.getABIContractJSONLD(contract);
 		response.setStatus(HttpServletResponse.SC_CREATED);
 		return block;
 	}

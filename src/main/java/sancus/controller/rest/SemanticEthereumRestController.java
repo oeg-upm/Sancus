@@ -24,16 +24,12 @@ public class SemanticEthereumRestController {
 	@Autowired
 	public SemanticEthereumService scProvider;
 	
-	@ApiOperation(value = "Retrieve a block and translate into JSONLD")
+	@ApiOperation(value = "Retrieve a block and translate into JSON-LD 1.1")
 	@RequestMapping(value="/ethereum/semanticBlock", method = RequestMethod.POST, consumes="application/json")
 	@ResponseBody
 	public String retrieveBlockJSONLD(HttpServletRequest request, HttpServletResponse response, @RequestBody(required=true) @Valid ChainExtractorModel blockConf) {
 		String block = null;
-		if(blockConf.isJSONLD()) {
-			block = scProvider.getBlockJSONLD(blockConf);
-		}else {
-			block = scProvider.getBlockRDF(blockConf);
-		}
+		block = scProvider.getBlockJSONLD(blockConf);
 		response.setStatus(HttpServletResponse.SC_CREATED);
 		return block;
 	}

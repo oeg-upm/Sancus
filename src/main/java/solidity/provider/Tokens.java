@@ -3,6 +3,9 @@ package solidity.provider;
 public class Tokens {
 	
 	//JSON Antlr4
+	public static final String CONTRACTDEFINITION = "contractDefinition";
+	public static final String NAME = "name";
+
 	public static final String stateVariableDeclaration = "stateVariableDeclaration";
 	public static final String variableDeclaration = "variableDeclaration";
 	public static final String enumDefinition = "enumDefinition";
@@ -18,7 +21,6 @@ public class Tokens {
 	public static final String text = "text";
 	public static final String statement = "statement";
 	public static final String modifierList = "modifierList";
-	public static final String contractDefinition = "contractDefinition";
 	public static final String pragmaDirective = "pragmaDirective";
 	public static final String inheritanceSpecifier = "inheritanceSpecifier";
 	public static final String USINGFORDECLARATION = "usingForDeclaration";

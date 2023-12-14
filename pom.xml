@@ -70,7 +70,7 @@
 		<dependency>
 			<groupId>org.web3j</groupId>
 			<artifactId>core</artifactId>
-			<version>4.8.7</version>
+			<version>4.10.3</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
 		<dependency>
@@ -153,7 +153,11 @@
     <artifactId>jena-shaded-guava</artifactId>
     <version>4.5.0</version>
 </dependency>
-
+<dependency>
+    <groupId>org.json</groupId>
+    <artifactId>json</artifactId>
+    <version>20210307</version>
+</dependency>
 		
 	</dependencies>
 	<build>

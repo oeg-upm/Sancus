@@ -44,7 +44,7 @@ public class SolidityToJSONParser {
 	public static void traverse(ParseTree tree, Map<String, Object> map) {
 		if (tree instanceof TerminalNodeImpl) {
 			Token token = ((TerminalNodeImpl) tree).getSymbol();
-			map.put("type", token.getType());
+//			map.put("type", token.getType());
 			map.put("text", token.getText());
 		}
 		else {

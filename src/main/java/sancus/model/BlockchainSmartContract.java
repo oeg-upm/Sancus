@@ -10,8 +10,6 @@ public class BlockchainSmartContract {
 	private String api;
 	@ApiModelProperty(notes = "text", example = "text", required = true) 
 	private String hash;
-	@ApiModelProperty(notes = "Convert to RDF. If not, the contract will be returned as JSON-LD", example = "True or False", required = true) 
-	private boolean convertToRDF;
 	
 //	public String getUrl() {
 //		return url;
@@ -30,12 +28,6 @@ public class BlockchainSmartContract {
 	}
 	public void setHash(String hash) {
 		this.hash = hash;
-	}
-	public boolean isConvertToRDF() {
-		return convertToRDF;
-	}
-	public void setConvertToRDF(boolean convertToRDF) {
-		this.convertToRDF = convertToRDF;
 	}
 
 }
