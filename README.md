@@ -16,8 +16,6 @@ The **ABI Contract Retriever** is a component that extracts and provides the App
 
 The **Solidity Contract Retriever** is a component designed to retrieve and display Solidity smart contracts from the Ethereum blockchain. It focuses on accessing the source code of contracts written in Solidity and providing the semantic representation.
 
-PD: The Solidity contract retriever code used for the paper was lost, uploading a new version
-
 ## Running Sancus
 
 Just run SancusProjectApplication.java. The service should be available at localhost:80
