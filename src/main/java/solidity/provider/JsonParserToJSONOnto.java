@@ -243,7 +243,7 @@ public class JsonParserToJSONOnto {
             ContractSpecification cs = impl.getContractSpecification();
 
             ObjectNode root = mapper.createObjectNode();
-            root.put("@context", "https://oeg-upm.github.io/Solidity-ontology/context/context.json");
+            root.put("@context", "https://raw.githubusercontent.com/oeg-upm/Sancus/refs/heads/main/context/Solidity.json");
             if (impl.getId() != null) {
                 root.put("@id", impl.getId());
             }
