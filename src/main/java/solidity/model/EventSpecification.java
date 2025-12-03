@@ -4,12 +4,18 @@ import java.util.ArrayList;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class EventSpecification {
 
-	public ArrayList<ParameterSpecification> hasEventArguments;
-	public String hasEventName;
-	public boolean anonymous;
+    @JsonProperty("hasEventArguments")
+    public ArrayList<ParameterSpecification> hasEventArguments;
+
+    @JsonProperty("eventName")
+    public String hasEventName;
+
+    @JsonProperty("isAnonymous")
+    public boolean anonymous;
 	
 	public ArrayList<ParameterSpecification> getHasEventArguments() {
 		return hasEventArguments;

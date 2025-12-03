@@ -1,10 +1,13 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 
 public class EnumSpecification {
-	
-	public ArrayList<Object> options;
+
+    @JsonProperty("option")
+    public ArrayList<Object> options;
 
 	public ArrayList<Object> getOptions() {
 		return options;

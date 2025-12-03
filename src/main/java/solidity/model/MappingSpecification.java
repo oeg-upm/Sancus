@@ -1,9 +1,14 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class MappingSpecification {
-	
-	public Object hasValueMap;
-	public Object hasKeyMap;
+
+    @JsonProperty("hasValueMap")
+    public Object hasValueMap;
+
+    @JsonProperty("hasKeyMap")
+    public Object hasKeyMap;
 	
 	public Object getHasValueMap() {
 		return hasValueMap;

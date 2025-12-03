@@ -1,9 +1,14 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class MemoryTypeSpecification {
 
-	public SingleMemoryTypeSpecification singleMemoryType;
-	public DualMemoryTypeSpecification dualMemoryType;
+    @JsonProperty("singleMemoryType")
+    public SingleMemoryTypeSpecification singleMemoryType;
+
+    @JsonProperty("dualMemoryType")
+    public DualMemoryTypeSpecification dualMemoryType;
 
 	public SingleMemoryTypeSpecification getSingleMemoryType() {
 		return singleMemoryType;

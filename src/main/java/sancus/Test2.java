@@ -1,4 +1,4 @@
-package solidity.provider;
+package sancus;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -23,9 +23,41 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-public class ContractToOnto {
+public class Test2 {
 
 	private static JsonArray namesContract = new JsonArray();
+
+	@SuppressWarnings("resource")
+	public static void main (String[] args) {
+		String directoryPath = "./export";
+
+		try {
+			readAllJSONFiles(directoryPath);
+			System.out.println("Finish");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void readAllJSONFiles(String directoryPath) throws IOException {
+		System.out.println("Start");
+		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directoryPath))) {
+			for (Path path : directoryStream) {
+				if (!Files.isDirectory(path)) {
+					String fileName = extractValueFromFileName(path.getFileName().toString());
+//					System.out.println(fileName);
+					JsonObject finalJSON = finalJson(readFile(path.toString(), StandardCharsets.UTF_8), fileName);
+
+//					File file = new File("./results/"+fileName+".json");
+//					writerToFile(file, finalJSON.toString());
+				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 	private static void getAllNames(JsonArray contracts) {
 		String uuid = UUID.randomUUID().toString();
@@ -36,7 +68,8 @@ public class ContractToOnto {
 						if(contractWithoutVersion.getAsJsonObject().has("name")) {
 							JsonObject nameAndUUID = new JsonObject();
 							nameAndUUID.addProperty("name", contractWithoutVersion.getAsJsonObject().get("name").getAsString());
-							nameAndUUID.addProperty("uuid", "uuid:"+uuid+"-"+ contractWithoutVersion.getAsJsonObject().get("name").getAsString());
+							nameAndUUID.addProperty("uuid", "uuid:"+uuid+"-"+ contractWithoutVersion.getAsJsonObject().get("name").getAsString().replace("./", "").replace("../", "").replace("\"", "-").replace("/", "-").replace(".sol", ""));
+//							nameAndUUID.addProperty("uuid", "uuid:"+uuid);
 							namesContract.add(nameAndUUID);
 						}
 					}
@@ -45,10 +78,11 @@ public class ContractToOnto {
 		}
 	}
 
-	public JsonArray finalJson(String contractConverted) {
-		JsonArray contractInput = JsonParser.parseString(contractConverted.toString()).getAsJsonObject().get("sourceUnit").getAsJsonArray();
-		JsonArray result = new JsonArray();
+
+	private static JsonObject finalJson(String jsonInput, String fileAddress) {
+		JsonArray contractInput = JsonParser.parseString(jsonInput.toString()).getAsJsonObject().get("sourceUnit").getAsJsonArray();
 		getAllNames(contractInput);
+
 		for(JsonElement jarry: contractInput) {
 			JsonObject finalJSON = new JsonObject();
 			JsonArray imports = new JsonArray();
@@ -108,8 +142,10 @@ public class ContractToOnto {
 							}
 						}
 						if(!finalJSON.has("@id")) {
-							finalJSON.addProperty("@id", "uuid:"+UUID.randomUUID().toString()+"-"+contractType);
+							finalJSON.addProperty("@id", "uuid:"+UUID.randomUUID().toString()+"-"+contractType.replace("./", "").replace("../", "").replace("\"", "-").replace("/", "-").replace(".sol", ""));
+//							finalJSON.addProperty("@id", searchNameAndInclude(contractType));
 						}
+
 						finalJSON.addProperty("contractName", contractName);
 						finalJSON.addProperty("@type", contractType);
 						finalJSON.addProperty("isAbstract", isAbstract);
@@ -151,9 +187,15 @@ public class ContractToOnto {
 			if(!structs.isEmpty()) {
 				finalJSON.add("hasImplementationStructType", structs);
 			}
-			result.add(finalJSON);
+//			System.out.println(finalJSON);
+			
+			String fileName = finalJSON.getAsJsonObject().get("@id").getAsString().replaceFirst("uuid:", "");
+			int lastDashIndex = fileName.lastIndexOf('-');
+			File file = new File("./Solidity/"+fileAddress + "-" + fileName.substring(lastDashIndex + 1)+".jsonld");
+			writerToFile(file, finalJSON.toString());
+		    
 		}
-		return result;
+		return null;
 	}
 
 	private static JsonArray inheritance(JsonArray importInheritance) {
@@ -251,7 +293,8 @@ public class ContractToOnto {
 		}
 		if(!found) {
 			JsonObject newName = new JsonObject();
-			valueName = "uuid:"+ UUID.randomUUID().toString()+"-"+value;
+			valueName = "uuid:"+ UUID.randomUUID().toString()+"-"+value.replace("./", "").replace("../", "").replace("\"", "-").replace("/", "-").replace(".sol", "");
+//			valueName = "uuid:"+ UUID.randomUUID().toString();
 			newName.addProperty("name", value);
 			newName.addProperty("uuid", valueName);
 			namesContract.add(newName);
@@ -414,7 +457,8 @@ public class ContractToOnto {
 					if(jelem.getAsJsonObject().get("functionDescriptor").getAsJsonArray().size()>1) {
 						if(jelem.getAsJsonObject().get("functionDescriptor").getAsJsonArray().get(1).getAsJsonObject().has("name")) {
 							String nameFunction = jelem.getAsJsonObject().get("functionDescriptor").getAsJsonArray().get(1).getAsJsonObject().get("name").getAsString();
-							function.add("functionName", catalogueElementaryType(nameFunction));
+							// CAMBIAR
+							function.addProperty("functionName", nameFunction);
 						}
 					}
 				}else if(jelem.getAsJsonObject().has("code")) {
@@ -628,4 +672,46 @@ public class ContractToOnto {
 		return new String[] {parteNoNumerica, parteNumerica};
 	}
 
+	static String readFile(String path, Charset encoding) throws IOException {
+		byte[] encoded = Files.readAllBytes(Paths.get(path));
+		return new String(encoded, encoding);
+	}
+
+	public static JSONObject readJSONFromFile(Path path) {
+		if (!path.toString().endsWith(".json")) {
+			System.err.println(path + " no es un archivo JSON. Omitiendo...");
+			return null;
+		}
+		try (InputStream is = Files.newInputStream(path)) {
+			JSONTokener tokener = new JSONTokener(is);
+			return new JSONObject(tokener);
+		} catch (IOException e) {
+			System.err.println("Error al leer el archivo: " + path);
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	private static void writerToFile(File file, String toFile) {
+		try {
+			FileWriter fileWriter = new FileWriter(file);
+			fileWriter.write(toFile);
+			fileWriter.flush();
+			fileWriter.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static String extractValueFromFileName(String fileName) {
+		String regex = "(0x[a-fA-F0-9]+)\\.json";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(fileName);
+
+		if (matcher.matches()) {
+			return matcher.group(1);
+		} else {
+			return null;
+		}
+	}
 }

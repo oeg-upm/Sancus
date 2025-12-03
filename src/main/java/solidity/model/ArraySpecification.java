@@ -1,10 +1,15 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 
 public class ArraySpecification {
-	
+
+    @JsonProperty("hasType")
 	public Object hasType;
+
+    @JsonProperty("hasArrayDimension")
 	public ArrayList<ArrayDimensionSpecification> hasArrayDimension;
 
 	public Object getHasType() {

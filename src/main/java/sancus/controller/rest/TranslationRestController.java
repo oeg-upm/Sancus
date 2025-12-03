@@ -19,11 +19,11 @@ import sancus.service.TranslationRestService;
 @Controller
 @Api(tags = "Semantic Smart Contract")
 public class TranslationRestController {
-	
+
 	@Autowired
 	public TranslationRestService scProvider;
-	
-	
+
+
 	/**
 	 * Translate contracts in JSON-LD
 	 * @param request
@@ -38,7 +38,7 @@ public class TranslationRestController {
 		response.setStatus(HttpServletResponse.SC_CREATED);
 		return finalContract;
 	}
-	
+
 	/**
 	 * Receive a Hash. If the hash is valid, convert to RDF or JSON-LD
 	 * @param request
@@ -50,6 +50,7 @@ public class TranslationRestController {
 	@ResponseBody
 	public String translateContractHash(HttpServletRequest request, HttpServletResponse response, @RequestBody(required=true) @Valid BlockchainSmartContract contract) {
 		String finalContract = scProvider.getContractFromHash(contract);
+		finalContract = scProvider.getTranslateContractJSONLD(finalContract);
 		response.setStatus(HttpServletResponse.SC_CREATED);
 		return finalContract;
 	}

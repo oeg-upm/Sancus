@@ -8,11 +8,18 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 
 public class InterfaceSpecification {
-	
-	public ArrayList<String> hasImports;
-	public ArrayList<String> hasVersion;
-	public ArrayList<FunctionSpecification> hasFunctions;
-	public ArrayList<EventSpecification> hasEvents;
+
+    @JsonProperty("hasImport")
+    public ArrayList<String> hasImports;
+
+    @JsonProperty("version")
+    public ArrayList<String> hasVersion;
+
+    @JsonProperty("hasImplementationFunction")
+    public ArrayList<FunctionSpecification> hasFunctions;
+
+    @JsonProperty("hasImplementationEvent")
+    public ArrayList<EventSpecification> hasEvents;
 	
 	public ArrayList<String> getHasImports() {
 		return hasImports;

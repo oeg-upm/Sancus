@@ -1,11 +1,19 @@
 package solidity.model;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class DualMemoryTypeSpecification {
-	
-	public short memoryM;
-	public short memoryN;
-	private DualType type;
+
+    @JsonProperty("memoryM")
+    public short memoryM;
+
+    @JsonProperty("memoryN")
+    public short memoryN;
+
+    @JsonProperty("dualMemoryType")
+    private DualType type;
+
 	
 	public enum DualType{FIXED, UFIXED};
 	

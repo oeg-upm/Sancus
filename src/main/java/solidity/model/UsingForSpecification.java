@@ -3,9 +3,12 @@ package solidity.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class UsingForSpecification {
-	
-	public String library;
-	public String type;
+
+    @JsonProperty("usingForName")
+    public String library;
+
+    @JsonProperty("hasType")
+    public String type;
 	
     @JsonProperty(value="hasUsingForName")
 	public String getType() {

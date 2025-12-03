@@ -1,12 +1,19 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 
 public class GlobalContractSpecification {
-	
-	public String id;
-	public String description;
-	public String version;
+
+    @JsonProperty("@id")
+    public String id;
+
+    @JsonProperty("description")
+    public String description;
+
+    @JsonProperty("version")
+    public String version;
 
 	public ArrayList<ImplementationSpecification> globalContract;
 

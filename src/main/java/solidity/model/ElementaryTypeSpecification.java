@@ -1,9 +1,12 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ElementaryTypeSpecification {
-	
-	private ElementaryType elementaryType;
-	
+
+    @JsonProperty("elementaryType")
+    private ElementaryType elementaryType;
+
 	public enum ElementaryType{ADDRESS, BOOL, STRING}
 	
 	public ElementaryType getElementaryType() {

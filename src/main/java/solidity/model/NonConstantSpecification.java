@@ -1,8 +1,11 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class NonConstantSpecification {
-	
-	public Object nonConstantAttribute;
+
+    @JsonProperty("nonConstantAttribute")
+    public Object nonConstantAttribute;
 
 	public Object getNonConstantAttribute() {
 		return nonConstantAttribute;

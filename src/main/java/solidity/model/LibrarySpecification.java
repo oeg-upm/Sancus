@@ -7,15 +7,30 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 public class LibrarySpecification {
-	
-	public ArrayList<String> hasImports;
-	public ArrayList<String> hasVersion;
-	public ArrayList<UsingForSpecification> hasUsingFor;
-	public ArrayList<AttributeSpecification> hasAttributes;
-	public ArrayList<ModifierSpecification> hasModifier;
-	public ArrayList<FunctionSpecification> hasFunctions;
-	public ArrayList<EventSpecification> hasEvents;
-	public boolean isAbstract;
+
+    @JsonProperty("hasImport")
+    public ArrayList<String> hasImports;
+
+    @JsonProperty("version")
+    public ArrayList<String> hasVersion;
+
+    @JsonProperty("hasUsingFor")
+    public ArrayList<UsingForSpecification> hasUsingFor;
+
+    @JsonProperty("hasContractAttribute")
+    public ArrayList<AttributeSpecification> hasAttributes;
+
+    @JsonProperty("hasImplementationModifier")
+    public ArrayList<ModifierSpecification> hasModifier;
+
+    @JsonProperty("hasImplementationFunction")
+    public ArrayList<FunctionSpecification> hasFunctions;
+
+    @JsonProperty("hasImplementationEvent")
+    public ArrayList<EventSpecification> hasEvents;
+
+    @JsonProperty("isAbstract")
+    public boolean isAbstract;
 	
 	public ArrayList<String> getHasImports() {
 		return hasImports;

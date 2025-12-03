@@ -4,13 +4,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ParameterSpecification {
 
-	public short hasParameterPosition;
-	public DataLocation hasParameterTypeWithDataLocation;
-	public String hasParameterName;
-	public SingleMemoryTypeSpecification memoryType;
-	public DualMemoryTypeSpecification dualMemoryType;
-	public ElementaryTypeSpecification elementaryType;
-	public String userParameterType;
+    @JsonProperty("hasParameterPosition")
+    public short hasParameterPosition;
+
+    @JsonProperty("hasParameterTypeWithDataLocation")
+    public DataLocation hasParameterTypeWithDataLocation;
+
+    @JsonProperty("hasParameterName")
+    public String hasParameterName;
+
+    @JsonProperty("memoryType")
+    public SingleMemoryTypeSpecification memoryType;
+
+    @JsonProperty("dualMemoryType")
+    public DualMemoryTypeSpecification dualMemoryType;
+
+    @JsonProperty("elementaryType")
+    public ElementaryTypeSpecification elementaryType;
+
+    @JsonProperty("userParameterType")
+    public String userParameterType;
 	
 	public enum DataLocation{CALLDATA, MEMORY, STORAGE, INDEXED, PAYABLE}
 	

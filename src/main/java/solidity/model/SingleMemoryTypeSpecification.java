@@ -3,10 +3,11 @@ package solidity.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SingleMemoryTypeSpecification {
-	public short memory;
-	
-    @JsonProperty(value="singleMemoryType")
-	private SingleType type;
+    @JsonProperty("memory")
+    public short memory;
+
+    @JsonProperty("singleMemoryType")
+    private SingleType type;
 	
 	public SingleType getType() {
 		return type;

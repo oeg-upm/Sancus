@@ -1,10 +1,15 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 
 public class ConstructorSpecification {
-	
-	public String hasCode;
+
+    @JsonProperty("constructorCode")
+    public String hasCode;
+
+    @JsonProperty("hasConstructorArguments")
 	public ArrayList<ParameterSpecification> hasConstructorArguments;
 	
 	public String getHasCode() {

@@ -1,8 +1,15 @@
 package sancus.service;
 
+import solidity.provider.SmartContractABIAnalyser;
+import solidity.provider.SmartContractChainAnalyser;
+
+import java.io.StringWriter;
+
 import org.springframework.stereotype.Service;
 
-import abi.provider.SmartContractABIAnalyser;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import sancus.model.BlockchainSmartContract;
 
 @Service
@@ -13,4 +20,6 @@ public class SmartContractABIService {
 	public String getABIContractJSONLD(BlockchainSmartContract contractConf) {
 		return scABIa.configureABIContract(contractConf);
 	}
+	
+
 }

@@ -1,0 +1,450 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "contract": {
+      "@id": "https://w3id.org/def/Solidity#contractName",
+      "@context": {
+        "@version": 1.1
+      }
+    },
+    "contractName": "https://w3id.org/def/Solidity#contractName",
+    "hasImport": {
+      "@id": "https://w3id.org/def/Solidity#hasImport",
+      "@context": {
+        "@version": 1.1,
+        "from": {
+          "@id": "https://w3id.org/def/Solidity#importFrom",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        },
+        "name": {
+          "@id": "https://w3id.org/def/Solidity#importName",
+          "@type": "http://www.w3.org/2001/XMLSchema#string"
+        }
+      }
+    },
+    "inheritance": {
+      "@id": "https://w3id.org/def/Solidity#hasInheritance",
+      "@type": "@id"
+    },
+    "version": "https://w3id.org/def/Solidity#version",
+    "hasInterface": {
+      "@id": "https://w3id.org/def/Solidity#hasInterface",
+      "@type": "@id"
+    },
+    "hasLibrary": {
+      "@id": "https://w3id.org/def/Solidity#isUsingLibrary",
+      "@type": "@id"
+    },
+    "hasContractConstructor": {
+      "@id": "https://w3id.org/def/Solidity#hasContractConstructor",
+      "@context": {
+        "@version": 1.1,
+        "constructorCode": "https://w3id.org/def/Solidity#constructorCode",
+        "hasConstructorArguments": {
+          "@id": "https://w3id.org/def/Solidity#hasConstructorArguments",
+          "@context": {
+            "@version": 1.1,
+            "hasParameterName": "https://w3id.org/def/Solidity#hasParameterName",
+            "hasParameterPosition": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterPosition",
+              "@type": "http://www.w3.org/2001/XMLSchema#short"
+            },
+            "hasParameterType": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterType",
+              "@context": {
+                "@version": 1.1,
+                "isRefersToContract": {
+                  "@id": "https://w3id.org/def/Solidity#isRefersToContract",
+                  "@type": "@id"
+                }
+              }
+            },
+            "hasParameterTypeWithDataLocation": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterTypeWithDataLocation",
+              "@type": "@vocab"
+            }
+          }
+        }
+      }
+    },
+    "hasContractAttribute": {
+      "@id": "https://w3id.org/def/Solidity#hasContractAttribute",
+      "@context": {
+        "@version": 1.1,
+        "@type": "@id",
+        "attributeName": "https://w3id.org/def/Solidity#attributeName",
+        "hasAttributeVisibility": {
+          "@id": "https://w3id.org/def/Solidity#hasAttributeVisibility",
+          "@type": "@vocab"
+        },
+        "isConstant": "https://w3id.org/def/Solidity#isConstant",
+        "isInmutable": "https://w3id.org/def/Solidity#isInmutable",
+        "isPayable": "https://w3id.org/def/Solidity#isPayable",
+        "hasNonConstantType": {
+          "@id": "https://w3id.org/def/Solidity#hasNonConstantType",
+          "@context": {
+            "@version": 1.1,
+            "calldata": {
+              "@id": "https://w3id.org/def/Solidity#calldata"
+            },
+            "memory": {
+              "@id": "https://w3id.org/def/Solidity#memory"
+            }
+          }
+        },
+        "hasConstantType": {
+          "@id": "https://w3id.org/def/Solidity#hasConstantType",
+          "@context": {
+            "@version": 1.1,
+            "hasMemoryType": {
+              "@id": "https://w3id.org/def/Solidity#hasMemoryType",
+              "@context": {
+                "@version": 1.1,
+                "memoryN": "https://w3id.org/def/Solidity#memoryN",
+                "memoryM": "https://w3id.org/def/Solidity#memoryM"
+              }
+            },
+            "hasPrimitiveType": {
+              "@id": "https://w3id.org/def/Solidity#hasPrimitiveType",
+              "@type": "@vocab"
+            }
+          }
+        },
+        "hasMapType": {
+          "@id": "https://w3id.org/def/Solidity#hasMapType",
+          "@context": {
+            "@version": 1.1,
+            "hasKeyMap": "https://w3id.org/def/Solidity#hasKeyMap",
+            "hasValueMap": "https://w3id.org/def/Solidity#hasValueMap"
+          }
+        },
+        "hasArrayType": {
+          "@id": "https://w3id.org/def/Solidity#hasArrayType",
+          "@context": {
+            "@version": 1.1,
+            "hasArrayDimension": {
+              "@id": "https://w3id.org/def/Solidity#hasArrayDimension",
+              "@context": {
+                "@version": 1.1,
+                "index": {
+                  "@id": "https://w3id.org/def/Solidity#index",
+                  "@type": "http://www.w3.org/2001/XMLSchema#short"
+                },
+                "length": {
+                  "@id": "https://w3id.org/def/Solidity#lenght",
+                  "@type": "http://www.w3.org/2001/XMLSchema#short"
+                }
+              }
+            },
+            "hasType": "https://w3id.org/def/Solidity#hasType"
+          }
+        },
+        "hasStructType": {
+          "@id": "https://w3id.org/def/Solidity#hasStructType",
+          "@context": {
+            "@version": 1.1,
+            "hasStructAttribute": {
+              "@id": "https://w3id.org/def/Solidity#hasStructAttribute",
+              "@context": {
+                "@version": 1.1,
+                "hasAttributeName": "https://w3id.org/def/Solidity#hasAttributeName",
+                "hasAttributeType": {
+                  "@id": "https://w3id.org/def/Solidity#hasAttributeType",
+                  "@context": {
+                    "@version": 1.1,
+                    "hasPrimitiveType": {
+                      "@id": "https://w3id.org/def/Solidity#hasPrimitiveType",
+                      "@type": "@vocab"
+                    },
+                    "hasMemoryType": {
+                      "@id": "https://w3id.org/def/Solidity#hasMemoryType",
+                      "@context": {
+                        "@version": 1.1,
+                        "memoryN": "https://w3id.org/def/Solidity#memoryN",
+                        "memoryM": "https://w3id.org/def/Solidity#memoryM"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "hasEnumType": {
+          "@id": "https://w3id.org/def/Solidity#hasEnumType",
+          "@context": {
+            "@version": 1.1,
+            "option": "https://w3id.org/def/Solidity#option"
+          }
+        }
+      }
+    },
+    "hasImplementationFunction": {
+      "@id": "https://w3id.org/def/Solidity#hasImplementationFunction",
+      "@context": {
+        "@version": 1.1,
+        "@type": "@id",
+        "functionName": {
+          "@id": "https://w3id.org/def/Solidity#functionName",
+          "@type": "@vocab"
+        },
+        "functionCode": "https://w3id.org/def/Solidity#functionCode",
+        "hasFunctionBehavior": {
+          "@id": "https://w3id.org/def/Solidity#hasFunctionBehaviour",
+          "@context": {
+            "@version": 1.1,
+            "hasFunctionVisibility": {
+              "@id": "https://w3id.org/def/Solidity#hasFunctionVisibilty",
+              "@type": "@vocab"
+            },
+            "hasStateMutability": {
+              "@id": "https://w3id.org/def/Solidity#hasStateMutability",
+              "@type": "@vocab"
+            }
+          }
+        },
+        "hasFunctionArguments": {
+          "@id": "https://w3id.org/def/Solidity#hasFunctionArguments",
+          "@context": {
+            "@version": 1.1,
+            "hasParameterName": "https://w3id.org/def/Solidity#hasParameterName",
+            "hasParameterPosition": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterPosition",
+              "@type": "http://www.w3.org/2001/XMLSchema#short"
+            },
+            "hasParameterType": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterType",
+              "@context": {
+                "@version": 1.1,
+                "hasPrimitiveType": {
+                  "@id": "https://w3id.org/def/Solidity#hasPrimitiveType",
+                  "@type": "@vocab"
+                },
+                "hasMemoryType": {
+                  "@id": "https://w3id.org/def/Solidity#hasMemoryType",
+                  "@context": {
+                    "@version": 1.1,
+                    "memoryN": "https://w3id.org/def/Solidity#memoryN",
+                    "memoryM": "https://w3id.org/def/Solidity#memoryM"
+                  }
+                }
+              }
+            },
+            "hasParameterTypeWithDataLocation": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterTypeWithDataLocation",
+              "@type": "@vocab"
+            }
+          }
+        },
+        "hasFunctionReturn": {
+          "@id": "https://w3id.org/def/Solidity#hasFunctionReturn",
+          "@context": {
+            "@version": 1.1,
+            "hasParameterName": "https://w3id.org/def/Solidity#hasParameterName",
+            "hasParameterPosition": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterPosition",
+              "@type": "http://www.w3.org/2001/XMLSchema#short"
+            },
+            "hasParameterType": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterType",
+              "@context": {
+                "@version": 1.1,
+                "hasPrimitiveType": {
+                  "@id": "https://w3id.org/def/Solidity#hasPrimitiveType",
+                  "@type": "@vocab"
+                },
+                "hasMemoryType": {
+                  "@id": "https://w3id.org/def/Solidity#hasMemoryType",
+                  "@context": {
+                    "@version": 1.1,
+                    "memoryN": "https://w3id.org/def/Solidity#memoryN",
+                    "memoryM": "https://w3id.org/def/Solidity#memoryM"
+                  }
+                }
+              }
+            },
+            "hasParameterTypeWithDataLocation": {
+              "@id": "https://w3id.org/def/Solidity#hasParameterTypeWithDataLocation",
+              "@type": "@vocab"
+            }
+          }
+        }
+      }
+    },
+    "hasImplementationEvent": {
+      "@id": "https://w3id.org/def/Solidity#hasImplementationEvent",
+      "@context": {
+        "@version": 1.1,
+        "@type": "@id"
+      }
+    },
+    "hasImplementationModifier": {
+      "@id": "https://w3id.org/def/Solidity#hasImplementationModifier",
+      "@context": {
+        "@version": 1.1,
+        "@type": "@id"
+      }
+    },
+    "hasImplementationStructType": {
+      "@id": "https://w3id.org/def/Solidity#hasImplementationStructType",
+      "@type": "@id"
+    },
+    "address": "https://w3id.org/def/Solidity#address",
+    "bool": "https://w3id.org/def/Solidity#bool",
+    "bytes": "https://w3id.org/def/Solidity#bytes",
+    "int": "https://w3id.org/def/Solidity#int",
+    "string": "https://w3id.org/def/Solidity#string",
+    "uint": "https://w3id.org/def/Solidity#uint",
+    "calldata": "https://w3id.org/def/Solidity#calldata",
+    "memory": "https://w3id.org/def/Solidity#memory",
+    "uint8": "https://w3id.org/def/Solidity#uint8",
+    "uint16": "https://w3id.org/def/Solidity#uint16",
+    "uint24": "https://w3id.org/def/Solidity#uint24",
+    "uint32": "https://w3id.org/def/Solidity#uint32",
+    "uint40": "https://w3id.org/def/Solidity#uint40",
+    "uint48": "https://w3id.org/def/Solidity#uint48",
+    "uint56": "https://w3id.org/def/Solidity#uint56",
+    "uint64": "https://w3id.org/def/Solidity#uint64",
+    "uint72": "https://w3id.org/def/Solidity#uint72",
+    "uint80": "https://w3id.org/def/Solidity#uint80",
+    "uint88": "https://w3id.org/def/Solidity#uint88",
+    "uint96": "https://w3id.org/def/Solidity#uint96",
+    "uint104": "https://w3id.org/def/Solidity#uint104",
+    "uint112": "https://w3id.org/def/Solidity#uint112",
+    "uint120": "https://w3id.org/def/Solidity#uint120",
+    "uint128": "https://w3id.org/def/Solidity#uint128",
+    "uint136": "https://w3id.org/def/Solidity#uint136",
+    "uint144": "https://w3id.org/def/Solidity#uint144",
+    "uint152": "https://w3id.org/def/Solidity#uint152",
+    "uint160": "https://w3id.org/def/Solidity#uint160",
+    "uint168": "https://w3id.org/def/Solidity#uint168",
+    "uint176": "https://w3id.org/def/Solidity#uint176",
+    "uint184": "https://w3id.org/def/Solidity#uint184",
+    "uint192": "https://w3id.org/def/Solidity#uint192",
+    "uint200": "https://w3id.org/def/Solidity#uint200",
+    "uint208": "https://w3id.org/def/Solidity#uint208",
+    "uint216": "https://w3id.org/def/Solidity#uint216",
+    "uint224": "https://w3id.org/def/Solidity#uint224",
+    "uint232": "https://w3id.org/def/Solidity#uint232",
+    "uint240": "https://w3id.org/def/Solidity#uint240",
+    "uint248": "https://w3id.org/def/Solidity#uint248",
+    "uint256": "https://w3id.org/def/Solidity#uint256",
+    "int8": "https://w3id.org/def/Solidity#int8",
+    "int16": "https://w3id.org/def/Solidity#int16",
+    "int24": "https://w3id.org/def/Solidity#int24",
+    "int32": "https://w3id.org/def/Solidity#int32",
+    "int40": "https://w3id.org/def/Solidity#int40",
+    "int48": "https://w3id.org/def/Solidity#int48",
+    "int56": "https://w3id.org/def/Solidity#int56",
+    "int64": "https://w3id.org/def/Solidity#int64",
+    "int72": "https://w3id.org/def/Solidity#int72",
+    "int80": "https://w3id.org/def/Solidity#int80",
+    "int88": "https://w3id.org/def/Solidity#int88",
+    "int96": "https://w3id.org/def/Solidity#int96",
+    "int104": "https://w3id.org/def/Solidity#int104",
+    "int112": "https://w3id.org/def/Solidity#int112",
+    "int120": "https://w3id.org/def/Solidity#int120",
+    "int128": "https://w3id.org/def/Solidity#int128",
+    "int136": "https://w3id.org/def/Solidity#int136",
+    "int144": "https://w3id.org/def/Solidity#int144",
+    "int152": "https://w3id.org/def/Solidity#int152",
+    "int160": "https://w3id.org/def/Solidity#int160",
+    "int168": "https://w3id.org/def/Solidity#int168",
+    "int176": "https://w3id.org/def/Solidity#int176",
+    "int184": "https://w3id.org/def/Solidity#int184",
+    "int192": "https://w3id.org/def/Solidity#int192",
+    "int200": "https://w3id.org/def/Solidity#int200",
+    "int208": "https://w3id.org/def/Solidity#int208",
+    "int216": "https://w3id.org/def/Solidity#int216",
+    "int224": "https://w3id.org/def/Solidity#int224",
+    "int232": "https://w3id.org/def/Solidity#int232",
+    "int240": "https://w3id.org/def/Solidity#int240",
+    "int248": "https://w3id.org/def/Solidity#int248",
+    "int256": "https://w3id.org/def/Solidity#int256",
+    "bytes1": "https://w3id.org/def/Solidity#bytes1",
+    "bytes2": "https://w3id.org/def/Solidity#bytes2",
+    "bytes3": "https://w3id.org/def/Solidity#bytes3",
+    "bytes4": "https://w3id.org/def/Solidity#bytes4",
+    "bytes5": "https://w3id.org/def/Solidity#bytes5",
+    "bytes6": "https://w3id.org/def/Solidity#bytes6",
+    "bytes7": "https://w3id.org/def/Solidity#bytes7",
+    "bytes8": "https://w3id.org/def/Solidity#bytes8",
+    "bytes9": "https://w3id.org/def/Solidity#bytes9",
+    "bytes10": "https://w3id.org/def/Solidity#bytes10",
+    "bytes11": "https://w3id.org/def/Solidity#bytes11",
+    "bytes12": "https://w3id.org/def/Solidity#bytes12",
+    "bytes13": "https://w3id.org/def/Solidity#bytes13",
+    "bytes14": "https://w3id.org/def/Solidity#bytes14",
+    "bytes15": "https://w3id.org/def/Solidity#bytes15",
+    "bytes16": "https://w3id.org/def/Solidity#bytes16",
+    "bytes17": "https://w3id.org/def/Solidity#bytes17",
+    "bytes18": "https://w3id.org/def/Solidity#bytes18",
+    "bytes19": "https://w3id.org/def/Solidity#bytes19",
+    "bytes20": "https://w3id.org/def/Solidity#bytes20",
+    "bytes21": "https://w3id.org/def/Solidity#bytes21",
+    "bytes22": "https://w3id.org/def/Solidity#bytes22",
+    "bytes23": "https://w3id.org/def/Solidity#bytes23",
+    "bytes24": "https://w3id.org/def/Solidity#bytes24",
+    "bytes25": "https://w3id.org/def/Solidity#bytes25",
+    "bytes26": "https://w3id.org/def/Solidity#bytes26",
+    "bytes27": "https://w3id.org/def/Solidity#bytes27",
+    "bytes28": "https://w3id.org/def/Solidity#bytes28",
+    "bytes29": "https://w3id.org/def/Solidity#bytes29",
+    "bytes30": "https://w3id.org/def/Solidity#bytes30",
+    "bytes31": "https://w3id.org/def/Solidity#bytes31",
+    "bytes32": "https://w3id.org/def/Solidity#bytes32",
+    "Abstract": "https://w3id.org/def/Solidity#Abstract",
+    "Address": "https://w3id.org/def/Solidity#Address",
+    "ArrayAttributeSpecification": "https://w3id.org/def/Solidity#ArrayAttributeSpecification",
+    "ArrayDimension": "https://w3id.org/def/Solidity#ArrayDimension",
+    "ArrayType": "https://w3id.org/def/Solidity#ArrayType",
+    "ArrayValue": "https://w3id.org/def/Solidity#ArrayValue",
+    "ArrayValueSpecification": "https://w3id.org/def/Solidity#ArrayValueSpecification",
+    "AttributeSpecification": "https://w3id.org/def/Solidity#AttributeSpecification",
+    "Bool": "https://w3id.org/def/Solidity#Bool",
+    "BoolValue": "https://w3id.org/def/Solidity#BoolValue",
+    "Bytes": "https://w3id.org/def/Solidity#Bytes",
+    "BytesValue": "https://w3id.org/def/Solidity#BytesValue",
+    "Calldata": "https://w3id.org/def/Solidity#Calldata",
+    "CodelessFunctionSpecification": "https://w3id.org/def/Solidity#CodelessFunctionSpecification",
+    "ConstantType": "https://w3id.org/def/Solidity#ConstantType",
+    "ConstructorSpecification": "https://w3id.org/def/Solidity#ConstructorSpecification",
+    "ContractAttributeSpecification": "https://w3id.org/def/Solidity#ContractAttributeSpecification",
+    "ContractSpecification": "https://w3id.org/def/Solidity#ContractSpecification",
+    "EnumSpecification": "https://w3id.org/def/Solidity#EnumSpecification",
+    "EventSpecification": "https://w3id.org/def/Solidity#EventSpecification",
+    "FunctionBehaviour": "https://w3id.org/def/Solidity#FunctionBehaviour",
+    "FunctionSpecification": "https://w3id.org/def/Solidity#FunctionSpecification",
+    "GlobalContractSpecification": "https://w3id.org/def/Solidity#GlobalContractSpecification",
+    "ImplementationSpecification": "https://w3id.org/def/Solidity#ImplementationSpecification",
+    "Interface": "https://w3id.org/def/Solidity#Interface",
+    "Internal": "https://w3id.org/def/Solidity#Internal",
+    "Library": "https://w3id.org/def/Solidity#Library",
+    "MapAttributeSpecification": "https://w3id.org/def/Solidity#MapAttributeSpecification",
+    "MapKeyType": "https://w3id.org/def/Solidity#MapKeyType",
+    "MapType": "https://w3id.org/def/Solidity#MapType",
+    "Memory": "https://w3id.org/def/Solidity#Memory",
+    "MemoryType": "https://w3id.org/def/Solidity#MemoryType",
+    "ModifierBehaviour": "https://w3id.org/def/Solidity#ModifierBehaviour",
+    "ModifierOverrideSpecification": "https://w3id.org/def/Solidity#ModifierOverrideSpecification",
+    "ModifierOverrideTipe": "https://w3id.org/def/Solidity#ModifierOverrideTipe",
+    "ModifierSpecification": "https://w3id.org/def/Solidity#ModifierSpecification",
+    "NonConstantAttributeSpecification": "https://w3id.org/def/Solidity#NonConstantAttributeSpecification",
+    "NonConstantType": "https://w3id.org/def/Solidity#NonConstantType",
+    "Override": "https://w3id.org/def/Solidity#Override",
+    "ParameterType": "https://w3id.org/def/Solidity#ParameterType",
+    "ParameterTypeWithDataLocation": "https://w3id.org/def/Solidity#ParameterTypeWithDataLocation",
+    "UsingForSpecification": "https://w3id.org/def/Solidity#UsingForDirective",
+    "VisibilitySpecification": "https://w3id.org/def/Solidity#Visibility",
+    "usingForName": "https://w3id.org/def/Solidity#usingForName",
+    "modifierCode": "https://w3id.org/def/Solidity#modifierCode",
+    "modifierName": "https://w3id.org/def/Solidity#modifierName",
+    "receiveCode": "https://w3id.org/def/Solidity#receiveCode",
+    "simpleBool": "https://w3id.org/def/Solidity#simpleBool",
+    "simpleBytes": "https://w3id.org/def/Solidity#simpleBytes",
+    "simpleFixed": "https://w3id.org/def/Solidity#simpleFixed",
+    "simpleGeneric": "https://w3id.org/def/Solidity#simpleGeneric",
+    "simpleInt": "https://w3id.org/def/Solidity#simpleInt",
+    "simpleString": "https://w3id.org/def/Solidity#simpleString"
+  }
+}

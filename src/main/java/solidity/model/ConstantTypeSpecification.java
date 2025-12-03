@@ -1,9 +1,12 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ConstantTypeSpecification {
 	
 	//Structs or Enums
-	public Object hasNonConstantStructAttribute;
+    @JsonProperty("hasNonConstantStructAttribute")
+    public Object hasNonConstantStructAttribute;
 
 	public Object getHasNonConstantStructAttribute() {
 		return hasNonConstantStructAttribute;

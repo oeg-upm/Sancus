@@ -1,13 +1,22 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 
 public class ModifierSpecification {
-	
-	public String hasModifierName;
-	public String hasCode;
-	private ModifierBehaviour modifierBehaviour;
-	public ArrayList<ParameterSpecification> hasModifierArguments;
+
+    @JsonProperty("modifierName")
+    public String hasModifierName;
+
+    @JsonProperty("modifierCode")
+    public String hasCode;
+
+    @JsonProperty("hasModifierBehaviour")
+    private ModifierBehaviour modifierBehaviour;
+
+    @JsonProperty("hasModifierArguments")
+    public ArrayList<ParameterSpecification> hasModifierArguments;
 
 	public enum ModifierBehaviour{VIRTUAL, OVERRIDE}
 

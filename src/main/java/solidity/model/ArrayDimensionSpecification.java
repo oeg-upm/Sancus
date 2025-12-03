@@ -1,9 +1,13 @@
 package solidity.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ArrayDimensionSpecification {
 
-	public short index;
-	public short lenght;
+    @JsonProperty("index")
+    public short index;
+    @JsonProperty("length")
+    public short lenght;
 	
 	public short getIndex() {
 		return index;

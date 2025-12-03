@@ -8,9 +8,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 public class StructSpecification {
-	
-	public ArrayList<AttributeSpecification> hasAttributesTest;
-	public String hasName;
+
+    @JsonProperty("hasNonConstantStructAttribute")
+    public ArrayList<AttributeSpecification> hasAttributesTest;
+
+    @JsonProperty("hasName")
+    public String hasName;
 
     @JsonProperty(value="hasNonConstantStructAttribute")
     @JsonInclude(Include.NON_DEFAULT)
@@ -22,7 +25,6 @@ public class StructSpecification {
 		this.hasAttributesTest = hasAttributesTest;
 	}
 
-    @JsonProperty(value="hasStructName")
     @JsonInclude(Include.NON_DEFAULT)
 	public String getHasName() {
 		return hasName;

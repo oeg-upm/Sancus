@@ -5,14 +5,24 @@ import java.util.ArrayList;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class FunctionSpecification {
-	
-	public String hasFunctionName;
-	public String hasCode;
-//	public Object hasFunctionBehaviour;
-	public ArrayList<Object> hasFunctionBehaviour;
-	public VisibilitySpecification hasVisibility;
-	public ArrayList<ParameterSpecification> paramSpecification;
-	public ArrayList<ParameterSpecification> returnParamSpecification;
+
+    @JsonProperty("functionName")
+    public String hasFunctionName;
+
+    @JsonProperty("functionCode")
+    public String hasCode;
+
+    @JsonProperty("hasFunctionBehaviour")
+    public ArrayList<Object> hasFunctionBehaviour;
+
+    @JsonProperty("hasFunctionVisibility")
+    public VisibilitySpecification hasVisibility;
+
+    @JsonProperty("hasFunctionArguments")
+    public ArrayList<ParameterSpecification> paramSpecification;
+
+    @JsonProperty("hasFunctionReturn")
+    public ArrayList<ParameterSpecification> returnParamSpecification;
 	
 //	public Object getHasFunctionBehaviour() {
 //		return hasFunctionBehaviour;

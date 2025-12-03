@@ -5,17 +5,22 @@ import java.util.ArrayList;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
 public class ImplementationSpecification {
-	
-	public String hasContractName;
-//	public ArrayList<String> hasImports;
-//	public String version;
-	public ContractSpecification contractSpecification;
+
+    @JsonProperty("contractName")
+    public String hasContractName;
+
+    @JsonUnwrapped
+    public ContractSpecification contractSpecification;
+
 	public LibrarySpecification librarySpecification;
 	public InterfaceSpecification interfaceSpecification;
-	public StructSpecification structSpecification;
-	public String id;
+    public StructSpecification structSpecification;
+
+    @JsonProperty("@id")
+    public String id;
 
 	public String getHasContractName() {
 		return hasContractName;

@@ -5,23 +5,45 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AttributeSpecification {
-	
-	public String hasName;
-	public VisibilitySpecification hasVisibility;
-	public NonConstantSpecification hasNonConstantAttribute;
-	public ArraySpecification hasArrayType;
-	public MappingSpecification hasMapType;
-	public StructSpecification hasStructType;
-	public Object hasEnumAttribute;
-	public boolean immutableProperty;
-	public boolean constantProperty;
-	public boolean payableProperty;
-	public String hasValue;
+
+    @JsonProperty("attributeName")
+    public String hasName;
+
+    @JsonProperty("hasAttributeVisibility")
+    public VisibilitySpecification hasVisibility;
+
+    @JsonProperty("hasNonConstantType")
+    public NonConstantSpecification hasNonConstantAttribute;
+
+    @JsonProperty("hasArrayType")
+    public ArraySpecification hasArrayType;
+
+    @JsonProperty("hasMapType")
+    public MappingSpecification hasMapType;
+
+    @JsonProperty("hasStructType")
+    public StructSpecification hasStructType;
+
+    @JsonProperty("hasEnumType")
+    public Object hasEnumAttribute;
+
+    @JsonProperty("isInmutable")
+    public boolean immutableProperty;
+
+    @JsonProperty("isConstant")
+    public boolean constantProperty;
+
+    @JsonProperty("isPayable")
+    public boolean payableProperty;
+
+    @JsonProperty("hasAttributeValue")
+    public String hasValue;
 	
     @JsonProperty(value="hasVisibility")
 	public VisibilitySpecification getVisibility() {
 		return hasVisibility;
 	}
+
 
 	public NonConstantSpecification getHasNonConstantAttribute() {
 		return hasNonConstantAttribute;
@@ -95,7 +117,6 @@ public class AttributeSpecification {
 		this.constantProperty = constantProperty;
 	}
 
-    @JsonProperty(value="hasValue")
 	public String getHasValue() {
 		return hasValue;
 	}
