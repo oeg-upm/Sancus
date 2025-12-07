@@ -48,8 +48,8 @@ public class Test2 {
 //					System.out.println(fileName);
 					JsonObject finalJSON = finalJson(readFile(path.toString(), StandardCharsets.UTF_8), fileName);
 
-//					File file = new File("./results/"+fileName+".json");
-//					writerToFile(file, finalJSON.toString());
+					File file = new File("./results/"+fileName+".json");
+					writerToFile(file, finalJSON.toString());
 				}
 			}
 		} catch (FileNotFoundException e) {

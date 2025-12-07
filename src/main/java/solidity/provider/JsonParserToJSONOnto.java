@@ -3,94 +3,1324 @@ package solidity.provider;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.EnumUtils;
-
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
-import solidity.model.ArrayDimensionSpecification;
-import solidity.model.ArraySpecification;
-import solidity.model.AttributeSpecification;
-import solidity.model.ConstructorSpecification;
-import solidity.model.ContractSpecification;
-import solidity.model.DualMemoryTypeSpecification;
-import solidity.model.ElementaryTypeSpecification;
-import solidity.model.EnumSpecification;
-import solidity.model.EventSpecification;
-import solidity.model.FunctionSpecification;
-import solidity.model.ImplementationSpecification;
-import solidity.model.InterfaceSpecification;
-import solidity.model.LibrarySpecification;
-import solidity.model.MappingSpecification;
-import solidity.model.MemoryTypeSpecification;
-import solidity.model.ModifierSpecification;
-import solidity.model.NonConstantSpecification;
-import solidity.model.ParameterSpecification;
-import solidity.model.SingleMemoryTypeSpecification;
-import solidity.model.StructSpecification;
-import solidity.model.UsingForSpecification;
-import solidity.model.VisibilitySpecification;
-import solidity.model.DualMemoryTypeSpecification.DualType;
-import solidity.model.ElementaryTypeSpecification.ElementaryType;
-import solidity.model.ParameterSpecification.DataLocation;
-import solidity.model.SingleMemoryTypeSpecification.SingleType;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 
 public class JsonParserToJSONOnto {
 
-    private JsonObject contractAntlrFormat;
-    private ImplementationSpecification implementationSpecification = new ImplementationSpecification();
-    private ArrayList<ImplementationSpecification> implementationSpecificationList = new ArrayList<>();
+    private JsonArray namesContract = new JsonArray();
 
-    private ArrayList<String> versionList = new ArrayList<>();
-    private ArrayList<String> importList = new ArrayList<>();
 
-    private ContractSpecification contractSpecification = new ContractSpecification();
-    private ArrayList<String> inheritanceList = new ArrayList<>();
-    private LibrarySpecification librarySpecification = new LibrarySpecification();
-    private InterfaceSpecification interfaceSpecification = new InterfaceSpecification();
+    public String JsonContractToJavaObject(String contractInSolidity, String contractHash) {
+        try {
+            JsonObject contractAntlrFormat = SolidityToJSONParser.contractJsonObject(contractInSolidity);
+            if (contractAntlrFormat == null) {
+                return "{}";
+            }
 
-    private ArrayList<AttributeSpecification> attributeSpecificationList = new ArrayList<>();
-    private AttributeSpecification attributeSpecification = new AttributeSpecification();
+            JsonElement jsonElement = JsonParser.parseString(contractAntlrFormat.toString());
+            if (!jsonElement.isJsonObject()) {
+                return "{}";
+            }
 
-    private MemoryTypeSpecification elementaryTypeName = new MemoryTypeSpecification();
+            JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-    private ArrayList<UsingForSpecification> usingForSpecificationList = new ArrayList<>();
-    private UsingForSpecification usingForSpecification = new UsingForSpecification();
+            cleanJsonElement(jsonObject, false);
+            transformContractDefinitions(jsonObject);
+            transformIdentifiers(jsonObject);
+            modifyContractPartJson(jsonObject);
+            modifyJsonArrayNotation(jsonObject);
+            modifyStateVariableDeclarations(jsonObject);
+            modifyVisibilityInStateVariableDeclarations(jsonObject);
+            modifyConstantInStateVariableDeclarations(jsonObject);
+            createValueStateVariableDeclarations(jsonObject);
 
-    private ConstructorSpecification constructorSpecification = new ConstructorSpecification();
+            JsonArray sourceUnit = jsonObject.getAsJsonArray("sourceUnit");
+            JsonArray groupedArray = groupElements(sourceUnit);
+            jsonObject.add("sourceUnit", groupedArray);
 
-    private ArrayList<EventSpecification> eventSpecificationList = new ArrayList<>();
-    private EventSpecification eventSpecification = new EventSpecification();
+            JsonObject finalJson = buildFinalJsonLd(jsonObject);
 
-    private ArrayList<ModifierSpecification> modifierSpecificationList = new ArrayList<>();
-    private ModifierSpecification modifierSpecification = new ModifierSpecification();
+            if (finalJson == null) {
+                return "{}";
+            }
 
-    private ArrayList<FunctionSpecification> functionSpecificationList = new ArrayList<>();
-    private FunctionSpecification functionSpecification = new FunctionSpecification();
-    private ArrayList<ParameterSpecification> parameterSpecificationList = new ArrayList<>();
-    private ParameterSpecification parameterSpecification = new ParameterSpecification();
 
-    private SingleMemoryTypeSpecification singleMemoryTypeSpecification = new SingleMemoryTypeSpecification();
-    private DualMemoryTypeSpecification dualMemoryTypeSpecification = new DualMemoryTypeSpecification();
-    private ElementaryTypeSpecification elementaryTypeSpecification = new ElementaryTypeSpecification();
-    private NonConstantSpecification nonConstantSpecification = new NonConstantSpecification();
-    private ArraySpecification arraySpecification = new ArraySpecification();
-    private MappingSpecification mapSpecification = new MappingSpecification();
-    private EnumSpecification enumSpecification = new EnumSpecification();
-    private StructSpecification structSpecification = new StructSpecification();
 
-    private ArrayDimensionSpecification arrayDimensionSpecification = new ArrayDimensionSpecification();
-    private ArrayList<ArrayDimensionSpecification> arrayDimensionSpecificationList = new ArrayList<>();
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(finalJson);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{}";
+        }
+    }
+
+    
+    private void createValueStateVariableDeclarations(JsonObject jsonObject) {
+        jsonObject.entrySet().forEach(entry -> {
+            JsonElement element = entry.getValue();
+
+            if (element.isJsonObject()) {
+                createValueStateVariableDeclarations(element.getAsJsonObject());
+            } else if (element.isJsonArray() && "stateVariableDeclaration".equals(entry.getKey())) {
+                processStateVariableDeclarationsArrayForValue(element.getAsJsonArray());
+            } else if (element.isJsonArray()) {
+                element.getAsJsonArray().forEach(item -> {
+                    if (item.isJsonObject()) {
+                        createValueStateVariableDeclarations(item.getAsJsonObject());
+                    }
+                });
+            }
+        });
+    }
+
+    private void processStateVariableDeclarationsArrayForValue(JsonArray jsonArray) {
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonElement element = jsonArray.get(i);
+            if (element.isJsonObject()) {
+                JsonObject obj = element.getAsJsonObject();
+                if (obj.has("text") && "=".equals(obj.get("text").getAsString())) {
+                    jsonArray.remove(i);
+                    i--;
+                } else if (obj.has("expression")) {
+                    String value = extractAndCombineTextFromExpression(obj.get("expression"));
+                    JsonObject newValueObject = new JsonObject();
+                    newValueObject.addProperty("value", value);
+                    jsonArray.set(i, newValueObject);
+                }
+            }
+        }
+    }
+
+    private String extractAndCombineTextFromExpression(JsonElement expression) {
+        StringBuilder valueBuilder = new StringBuilder();
+        extractTextRecursively(expression, valueBuilder);
+        return valueBuilder.toString();
+    }
+
+    private void extractTextRecursively(JsonElement element, StringBuilder valueBuilder) {
+        if (element.isJsonObject()) {
+            JsonObject obj = element.getAsJsonObject();
+            if (obj.has("text")) {
+                valueBuilder.append(obj.get("text").getAsString());
+            } else {
+                obj.entrySet().forEach(entry -> extractTextRecursively(entry.getValue(), valueBuilder));
+            }
+        } else if (element.isJsonArray()) {
+            element.getAsJsonArray().forEach(item -> extractTextRecursively(item, valueBuilder));
+        }
+    }
+
+    private void modifyConstantInStateVariableDeclarations(JsonObject jsonObject) {
+        jsonObject.entrySet().forEach(entry -> {
+            JsonElement element = entry.getValue();
+
+            if (element.isJsonObject()) {
+                modifyConstantInStateVariableDeclarations(element.getAsJsonObject());
+            } else if (element.isJsonArray() && "stateVariableDeclaration".equals(entry.getKey())) {
+                processStateVariableDeclarationsArrayForConstant(element.getAsJsonArray());
+            } else if (element.isJsonArray()) {
+                element.getAsJsonArray().forEach(item -> {
+                    if (item.isJsonObject()) {
+                        modifyConstantInStateVariableDeclarations(item.getAsJsonObject());
+                    }
+                });
+            }
+        });
+    }
+
+    private void processStateVariableDeclarationsArrayForConstant(JsonArray jsonArray) {
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonElement element = jsonArray.get(i);
+            if (element.isJsonObject() && element.getAsJsonObject().has("text") &&
+                    "constant".equals(element.getAsJsonObject().get("text").getAsString())) {
+                JsonObject newObject = new JsonObject();
+                newObject.addProperty("isConstant", true);
+                jsonArray.set(i, newObject);
+            }
+        }
+    }
+
+    private void modifyContractPartJson(JsonObject jsonObject) {
+        JsonArray contractParts = jsonObject.getAsJsonArray("contractPart");
+        if (contractParts != null) {
+            for (JsonElement contractPartElement : contractParts) {
+                for (Map.Entry<String, JsonElement> entry : contractPartElement.getAsJsonObject().entrySet()) {
+                    jsonObject.add(entry.getKey(), entry.getValue());
+                }
+            }
+            jsonObject.remove("contractPart");
+        }
+        for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+            if (entry.getValue().isJsonObject()) {
+                modifyContractPartJson(entry.getValue().getAsJsonObject());
+            } else if (entry.getValue().isJsonArray()) {
+                for (JsonElement childElement : entry.getValue().getAsJsonArray()) {
+                    if (childElement.isJsonObject()) {
+                        modifyContractPartJson(childElement.getAsJsonObject());
+                    }
+                }
+            }
+        }
+    }
+
+    private void transformIdentifiers(JsonObject jsonObject) {
+        Set<String> keysToRemove = new HashSet<>();
+        JsonObject newEntries = new JsonObject();
+
+        for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+            String key = entry.getKey();
+            JsonElement value = entry.getValue();
+
+            if (value.isJsonObject()) {
+                transformIdentifiers(value.getAsJsonObject());
+            } else if (value.isJsonArray() && key.equals("identifier") && value.getAsJsonArray().size() == 1) {
+                JsonObject identifierObj = value.getAsJsonArray().get(0).getAsJsonObject();
+                if (identifierObj.has("text")) {
+                    String name = identifierObj.get("text").getAsString();
+                    keysToRemove.add(key);
+                    newEntries.addProperty("name", name);
+                }
+            } else if (value.isJsonArray()) {
+                transformIdentifiersInArray(value.getAsJsonArray());
+            }
+        }
+
+        keysToRemove.forEach(jsonObject::remove);
+        for (Map.Entry<String, JsonElement> entry : newEntries.entrySet()) {
+            jsonObject.add(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private void transformIdentifiersInArray(JsonArray jsonArray) {
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonElement element = jsonArray.get(i);
+            if (element.isJsonObject()) {
+                transformIdentifiers(element.getAsJsonObject());
+            } else if (element.isJsonArray()) {
+                transformIdentifiersInArray(element.getAsJsonArray());
+            }
+        }
+    }
+
+    private void transformContractDefinitions(JsonObject jsonObject) {
+        JsonArray sourceUnit = jsonObject.getAsJsonArray("sourceUnit");
+        if (sourceUnit == null) return;
+
+        for (JsonElement element : sourceUnit) {
+            if (element.isJsonObject()) {
+                JsonObject obj = element.getAsJsonObject();
+                if (obj.has("contractDefinition")) {
+                    JsonArray contractDefinition = obj.getAsJsonArray("contractDefinition");
+                    transformContractDefinitionElements(contractDefinition);
+                }
+            }
+        }
+    }
+
+    private void transformContractDefinitionElements(JsonArray contractDefinition) {
+        boolean isAbstract = false;
+        String contractType = null;
+        for (int i = 0; i < contractDefinition.size(); i++) {
+            JsonObject element = contractDefinition.get(i).getAsJsonObject();
+            if (element.has("text")) {
+                String text = element.get("text").getAsString();
+                if ("contract".equals(text) || "library".equals(text) || "interface".equals(text)) {
+                    contractType = text;
+                    contractDefinition.remove(i);
+                    i--;
+                } else if ("abstract".equals(text)) {
+                    isAbstract = true;
+                    contractDefinition.remove(i);
+                    i--;
+                }
+            }
+        }
+        if (contractType != null) {
+            JsonObject typeObject = new JsonObject();
+            typeObject.addProperty("contractType", contractType);
+            contractDefinition.add(typeObject);
+        }
+        JsonObject abstractObject = new JsonObject();
+        abstractObject.addProperty("isAbstract", isAbstract);
+        contractDefinition.add(abstractObject);
+    }
+
+    private void cleanJsonElement(JsonElement element, boolean insideBlock) {
+        if (element.isJsonObject()) {
+            JsonObject jsonObject = element.getAsJsonObject();
+            Set<String> keysToRemove = new HashSet<>();
+
+            for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+                String key = entry.getKey();
+                JsonElement value = entry.getValue();
+
+                if ("block".equals(key)) {
+                    String code = processBlock(value.getAsJsonArray());
+                    if (!code.isEmpty()) {
+                        jsonObject.addProperty("code", code);
+                    }
+                    keysToRemove.add(key);
+                } else if (!insideBlock && (shouldBeRemoved(key) || shouldBeRemoved(value))) {
+                    keysToRemove.add(key);
+                } else {
+                    cleanJsonElement(value, "block".equals(key) || insideBlock);
+                    if (value.isJsonObject() && value.getAsJsonObject().size() == 0 ||
+                            value.isJsonArray() && value.getAsJsonArray().size() == 0) {
+                        keysToRemove.add(key);
+                    }
+                }
+            }
+            keysToRemove.forEach(jsonObject::remove);
+        } else if (element.isJsonArray()) {
+            JsonArray jsonArray = element.getAsJsonArray();
+            for (int i = 0; i < jsonArray.size(); i++) {
+                JsonElement arrayElement = jsonArray.get(i);
+                if (!insideBlock && shouldBeRemoved(arrayElement)) {
+                    jsonArray.remove(i);
+                    i--;
+                } else {
+                    cleanJsonElement(arrayElement, insideBlock);
+                    if (arrayElement.isJsonObject() && arrayElement.getAsJsonObject().size() == 0 ||
+                            arrayElement.isJsonArray() && arrayElement.getAsJsonArray().size() == 0) {
+                        jsonArray.remove(i);
+                        i--;
+                    }
+                }
+            }
+        }
+    }
+
+    private String processBlock(JsonArray block) {
+        StringBuilder codeBuilder = new StringBuilder();
+        processBlockHelper(block, codeBuilder, false);
+        return codeBuilder.toString();
+    }
+
+    private void processBlockHelper(JsonArray jsonArray, StringBuilder codeBuilder, boolean isStatement) {
+        for (JsonElement element : jsonArray) {
+            if (element.isJsonObject()) {
+                JsonObject obj = element.getAsJsonObject();
+                if (obj.has("text")) {
+                    String text = obj.get("text").getAsString();
+                    if (!"{".equals(text) && !"}".equals(text)) {
+                        if (shouldAddSpaceBefore(text, codeBuilder)) {
+                            codeBuilder.append(" ");
+                        }
+                        codeBuilder.append(text);
+                    }
+                } else {
+                    for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                        if (entry.getValue().isJsonArray()) {
+                            boolean newIsStatement = "statement".equals(entry.getKey());
+                            if (isStatement && codeBuilder.length() > 0) {
+                                codeBuilder.append("\n");
+                            }
+                            processBlockHelper(entry.getValue().getAsJsonArray(), codeBuilder, newIsStatement);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean shouldAddSpaceBefore(String text, StringBuilder codeBuilder) {
+        if (codeBuilder.length() == 0 || text.length() == 0) {
+            return false;
+        }
+        char lastCharInBuilder = codeBuilder.charAt(codeBuilder.length() - 1);
+        char firstCharInText = text.charAt(0);
+
+        if (isOperatorChar(firstCharInText) || firstCharInText == '[' || firstCharInText == ']' ||
+                firstCharInText == '(' || firstCharInText == ';' || firstCharInText == '.' ||
+                firstCharInText == ',' || firstCharInText == ')') {
+            return false;
+        }
+        if (lastCharInBuilder == '(') {
+            return false;
+        }
+        return !(isOperatorChar(lastCharInBuilder) || lastCharInBuilder == '.');
+    }
+
+    private boolean isOperatorChar(char c) {
+        return c == '+' || c == '-' || c == '*' || c == '/' || c == '&' || c == '|' || c == '^' || c == '!';
+    }
+
+    private boolean shouldBeRemoved(String value) {
+        return value.equals("(") || value.equals(",") || value.equals("is") ||
+                value.equals("returns") || value.equals("solidity") || value.equals("pragma") ||
+                value.equals(")") || value.equals(";") || value.equals("{") || value.equals("}") ||
+                value.equals("<EOF>");
+    }
+
+    private boolean shouldBeRemoved(JsonElement element) {
+        return element.isJsonPrimitive() && shouldBeRemoved(element.getAsString());
+    }
+
+    private JsonArray groupElements(JsonArray sourceUnit) {
+        JsonArray result = new JsonArray();
+        JsonElement lastPragmaDirective = createUnknownPragmaDirective();
+        ArrayList<JsonElement> currentGroup = new ArrayList<>();
+        List<JsonElement> importDirectives = new ArrayList<>();
+
+        for (JsonElement element : sourceUnit) {
+            JsonObject obj = element.getAsJsonObject();
+            if (obj.has("importDirective")) {
+                processImportDirective(obj);
+                importDirectives.add(element);
+                continue;
+            }
+            if (obj.has("pragmaDirective")) {
+                lastPragmaDirective = element;
+                String pragmaText = concatenateTextValues(obj.getAsJsonArray("pragmaDirective"));
+                lastPragmaDirective.getAsJsonObject().addProperty("pragmaDirective", pragmaText);
+                if (!currentGroup.isEmpty()) {
+                    addGroupToResult(result, currentGroup, importDirectives);
+                }
+            } else if (obj.has("contractDefinition")) {
+                if (!currentGroup.contains(lastPragmaDirective)) {
+                    currentGroup.add(lastPragmaDirective);
+                }
+                currentGroup.add(element);
+                addGroupToResult(result, currentGroup, importDirectives);
+            } else if (obj.has("importDirective")) {
+                currentGroup.add(element);
+                addGroupToResult(result, currentGroup, importDirectives);
+            }
+        }
+        return result;
+    }
+
+    private void processImportDirective(JsonObject importDirectiveObj) {
+        JsonArray importArray = importDirectiveObj.getAsJsonArray("importDirective");
+        if (importArray != null) {
+            Iterator<JsonElement> iterator = importArray.iterator();
+            while (iterator.hasNext()) {
+                JsonElement elem = iterator.next();
+                if (elem.isJsonObject() && elem.getAsJsonObject().has("text") &&
+                        "import".equals(elem.getAsJsonObject().get("text").getAsString())) {
+                    iterator.remove();
+                }
+            }
+
+            if (importArray.size() >= 2) {
+                JsonObject secondLast = importArray.get(importArray.size() - 2).getAsJsonObject();
+                JsonObject last = importArray.get(importArray.size() - 1).getAsJsonObject();
+
+                if (secondLast.has("text") && last.has("text")) {
+                    String lastText = last.get("text").getAsString();
+                    importArray.remove(importArray.size() - 2);
+                    last.addProperty("from", lastText);
+                    last.remove("text");
+                }
+            }
+        }
+    }
+
+    private void addGroupToResult(JsonArray result, ArrayList<JsonElement> group, List<JsonElement> importDirectives) {
+        if (group.size() == 1 && importDirectives.isEmpty()) {
+            result.add(group.get(0));
+        } else {
+            JsonArray newGroup = new JsonArray();
+            for (JsonElement el : group) {
+                newGroup.add(el);
+            }
+            for (JsonElement importDirective : importDirectives) {
+                newGroup.add(importDirective);
+            }
+            result.add(newGroup);
+        }
+        group.clear();
+        importDirectives.clear();
+    }
+
+    private JsonElement createUnknownPragmaDirective() {
+        JsonObject unknownPragmaDirective = new JsonObject();
+        unknownPragmaDirective.addProperty("pragmaDirective", "Unknown");
+        return unknownPragmaDirective;
+    }
+
+    private String concatenateTextValues(JsonArray jsonArray) {
+        StringBuilder textBuilder = new StringBuilder();
+        for (JsonElement element : jsonArray) {
+            concatenateTextValuesHelper(element, textBuilder);
+        }
+        return textBuilder.toString();
+    }
+
+    private void concatenateTextValuesHelper(JsonElement element, StringBuilder textBuilder) {
+        if (element.isJsonObject()) {
+            JsonObject jsonObject = element.getAsJsonObject();
+            for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+                if ("text".equals(entry.getKey()) && entry.getValue().isJsonPrimitive()) {
+                    textBuilder.append(entry.getValue().getAsString());
+                } else if (entry.getValue().isJsonObject() || entry.getValue().isJsonArray()) {
+                    concatenateTextValuesHelper(entry.getValue(), textBuilder);
+                }
+            }
+        } else if (element.isJsonArray()) {
+            for (JsonElement arrayElement : element.getAsJsonArray()) {
+                concatenateTextValuesHelper(arrayElement, textBuilder);
+            }
+        }
+    }
+
+    public boolean isValid(String json) {
+        try {
+            JsonParser.parseString(json);
+        } catch (JsonSyntaxException e) {
+            return false;
+        }
+        return true;
+    }
+
+    public String checkIsJSONandModify(String code) {
+        if (code.startsWith("{{") && code.endsWith("}}")) {
+            return code.substring(1, code.length() - 1);
+        }
+        return code;
+    }
+
+    public void modifyJsonArrayNotation(JsonObject jsonObject) {
+        jsonObject.entrySet().forEach(entry -> {
+            JsonElement element = entry.getValue();
+
+            if (element.isJsonObject()) {
+                modifyJsonArrayNotation(element.getAsJsonObject());
+            } else if (element.isJsonArray()) {
+                processJsonArray(element.getAsJsonArray());
+            }
+        });
+    }
+
+    private void processJsonArray(JsonArray jsonArray) {
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonElement element = jsonArray.get(i);
+            if (element.isJsonObject()) {
+                JsonObject object = element.getAsJsonObject();
+                if (i < jsonArray.size() - 1 && isBracketPair(object, jsonArray.get(i + 1))) {
+                    JsonObject newArrayIndicator = new JsonObject();
+                    newArrayIndicator.addProperty("isArray", true);
+                    jsonArray.set(i, newArrayIndicator);
+                    jsonArray.remove(i + 1);
+                    i--;
+                } else {
+                    modifyJsonArrayNotation(object);
+                }
+            } else if (element.isJsonArray()) {
+                processJsonArray(element.getAsJsonArray());
+            }
+        }
+    }
+
+    private boolean isBracketPair(JsonObject currentObj, JsonElement nextElement) {
+        if (nextElement.isJsonObject()) {
+            JsonObject nextObj = nextElement.getAsJsonObject();
+            return currentObj.has("text") && currentObj.get("text").getAsString().equals("[") &&
+                    nextObj.has("text") && nextObj.get("text").getAsString().equals("]");
+        }
+        return false;
+    }
+
+    public void modifyStateVariableDeclarations(JsonObject jsonObject) {
+        jsonObject.entrySet().forEach(entry -> {
+            JsonElement element = entry.getValue();
+
+            if (element.isJsonObject()) {
+                modifyStateVariableDeclarations(element.getAsJsonObject());
+            } else if (element.isJsonArray() && "stateVariableDeclaration".equals(entry.getKey())) {
+                processStateVariableDeclarationsArray(element.getAsJsonArray());
+            } else if (element.isJsonArray()) {
+                element.getAsJsonArray().forEach(item -> {
+                    if (item.isJsonObject()) {
+                        modifyStateVariableDeclarations(item.getAsJsonObject());
+                    }
+                });
+            }
+        });
+    }
+
+    private void processStateVariableDeclarationsArray(JsonArray jsonArray) {
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonElement element = jsonArray.get(i);
+            if (element.isJsonObject() && element.getAsJsonObject().has("text") &&
+                    "immutable".equals(element.getAsJsonObject().get("text").getAsString())) {
+                JsonObject newObject = new JsonObject();
+                newObject.addProperty("isImmutable", true);
+                jsonArray.set(i, newObject);
+            }
+        }
+    }
+
+    public void modifyVisibilityInStateVariableDeclarations(JsonObject jsonObject) {
+        jsonObject.entrySet().forEach(entry -> {
+            JsonElement element = entry.getValue();
+
+            if (element.isJsonObject()) {
+                modifyVisibilityInStateVariableDeclarations(element.getAsJsonObject());
+            } else if (element.isJsonArray() && "stateVariableDeclaration".equals(entry.getKey())) {
+                processStateVariableDeclarationsArrayForVisibility(element.getAsJsonArray());
+            } else if (element.isJsonArray()) {
+                element.getAsJsonArray().forEach(item -> {
+                    if (item.isJsonObject()) {
+                        modifyVisibilityInStateVariableDeclarations(item.getAsJsonObject());
+                    }
+                });
+            }
+        });
+    }
+
+    private void processStateVariableDeclarationsArrayForVisibility(JsonArray jsonArray) {
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonElement element = jsonArray.get(i);
+            if (element.isJsonObject() && element.getAsJsonObject().has("text")) {
+                String textValue = element.getAsJsonObject().get("text").getAsString();
+                if (isVisibilityKeyword(textValue)) {
+                    JsonObject newObject = new JsonObject();
+                    newObject.addProperty("visibility", textValue);
+                    jsonArray.set(i, newObject);
+                }
+            }
+        }
+    }
+
+    private boolean isVisibilityKeyword(String text) {
+        return "private".equals(text) || "public".equals(text) ||
+                "internal".equals(text) || "external".equals(text);
+    }
+
+    private JsonObject buildFinalJsonLd(JsonObject intermediate) {
+        JsonArray contractInput = intermediate.getAsJsonArray("sourceUnit");
+        if (contractInput == null) {
+            return null;
+        }
+
+        namesContract = new JsonArray();
+        getAllNames(contractInput);
+
+        JsonObject lastFinalJSON = null;
+
+        for (JsonElement jarry : contractInput) {
+            if (!jarry.isJsonArray()) continue;
+            JsonObject finalJSON = new JsonObject();
+            JsonArray imports = new JsonArray();
+            JsonArray constructor = new JsonArray();
+            JsonArray functions = new JsonArray();
+            JsonArray fallback = new JsonArray();
+            JsonArray receive = new JsonArray();
+            JsonArray attributes = new JsonArray();
+            JsonArray isUsingFor = new JsonArray();
+            JsonArray modifiers = new JsonArray();
+            JsonArray structs = new JsonArray();
+            JsonArray events = new JsonArray();
+            JsonArray inheritance = new JsonArray();
+
+            for (JsonElement contract : jarry.getAsJsonArray()) {
+                finalJSON.addProperty("@context", "https://oeg-upm.github.io/Solidity-ontology/context/context.json");
+
+                JsonObject cObj = contract.getAsJsonObject();
+
+                if (cObj.has("pragmaDirective")) {
+                    finalJSON.addProperty("version", cObj.get("pragmaDirective").getAsString());
+                } else if (cObj.has("contractDefinition")) {
+                    String contractName = "";
+                    String contractType = "";
+                    boolean isAbstract = false;
+                    for (JsonElement contractWithoutVersion : cObj.get("contractDefinition").getAsJsonArray()) {
+                        JsonObject cd = contractWithoutVersion.getAsJsonObject();
+                        if (cd.has("name")) {
+                            contractName = cd.get("name").getAsString();
+                        } else if (cd.has("contractType")) {
+                            contractType = cd.get("contractType").getAsString();
+                        } else if (cd.has("isAbstract")) {
+                            isAbstract = cd.get("isAbstract").getAsBoolean();
+                        } else if (cd.has("inheritanceSpecifier")) {
+                            inheritance.add(inheritance(cd.get("inheritanceSpecifier").getAsJsonArray()));
+                        } else if (cd.has("functionDefinition")) {
+                            JsonArray fd = cd.get("functionDefinition").getAsJsonArray();
+                            String descriptor = fd.get(0).getAsJsonObject()
+                                    .get("functionDescriptor").getAsJsonArray()
+                                    .get(0).getAsJsonObject()
+                                    .get("text").getAsString();
+                            switch (descriptor) {
+                                case "function":
+                                    functions.add(analyseFunction(fd));
+                                    break;
+                                case "constructor":
+                                    constructor.add(analyseConstructor(fd));
+                                    break;
+                                case "receive":
+                                    receive.add(analyseReceive(fd));
+                                    break;
+                                case "fallback":
+                                    fallback.add(analyseFallback(fd));
+                                    break;
+                            }
+                        } else if (cd.has("usingForDeclaration")) {
+                            isUsingFor.add(analyseIsUsingFor(cd.get("usingForDeclaration").getAsJsonArray()));
+                        } else if (cd.has("eventDefinition")) {
+                            events.add(analyseEvents(cd.get("eventDefinition").getAsJsonArray()));
+                        } else if (cd.has("stateVariableDeclaration")) {
+                            attributes.add(analyseAttribute(cd.get("stateVariableDeclaration").getAsJsonArray()));
+                        } else if (cd.has("structDefinition")) {
+                            structs.add(analyseStructs(cd.get("structDefinition").getAsJsonArray()));
+                        } else if (cd.has("modifierDefinition")) {
+                            modifiers.add(analyseModifier(cd.get("modifierDefinition").getAsJsonArray()));
+                        } else if (cd.has("enumDefinition")) {
+                            attributes.add(analyseEnum(cd.get("enumDefinition").getAsJsonArray()));
+                        }
+
+                        for (JsonElement name : namesContract) {
+                            if (name.getAsJsonObject().get("name").getAsString().contentEquals(contractName)) {
+                                finalJSON.addProperty("@id", name.getAsJsonObject().get("uuid").getAsString());
+                            }
+                        }
+                        if (!finalJSON.has("@id")) {
+                            finalJSON.addProperty("@id", "uuid:" + UUID.randomUUID().toString() + "-"
+                                    + contractType.replace("./", "")
+                                                  .replace("../", "")
+                                                  .replace("\"", "-")
+                                                  .replace("/", "-")
+                                                  .replace(".sol", ""));
+                        }
+
+                        finalJSON.addProperty("contractName", contractName);
+                        finalJSON.addProperty("@type", contractType);
+                        finalJSON.addProperty("isAbstract", isAbstract);
+                    }
+                } else if (cObj.has("importDirective")) {
+                    imports.add(analyseImports(cObj.get("importDirective").getAsJsonArray()));
+                }
+            }
+
+            if (!inheritance.isEmpty()) {
+                finalJSON.add("inheritance", inheritance);
+            }
+            if (!imports.isEmpty()) {
+                finalJSON.add("hasImport", imports);
+            }
+            if (!events.isEmpty()) {
+                finalJSON.add("hasImplementationEvent", events);
+            }
+            if (!modifiers.isEmpty()) {
+                finalJSON.add("hasImplementationModifier", modifiers);
+            }
+            if (!functions.isEmpty()) {
+                finalJSON.add("hasImplementationFunction", functions);
+            }
+            if (!constructor.isEmpty()) {
+                finalJSON.add("hasContractConstructor", constructor);
+            }
+            if (!fallback.isEmpty()) {
+                finalJSON.add("hasContractFallback", fallback);
+            }
+            if (!receive.isEmpty()) {
+                finalJSON.add("hasContractReceive", receive);
+            }
+            if (!attributes.isEmpty()) {
+                finalJSON.add("hasContractAttribute", attributes);
+            }
+            if (!isUsingFor.isEmpty()) {
+                finalJSON.add("hasContractUsingForDirective", isUsingFor);
+            }
+            if (!structs.isEmpty()) {
+                finalJSON.add("hasImplementationStructType", structs);
+            }
+
+            lastFinalJSON = finalJSON; 
+        }
+
+        return lastFinalJSON;
+    }
+
+    private void getAllNames(JsonArray contracts) {
+        String uuid = UUID.randomUUID().toString();
+        for (JsonElement contract : contracts) {
+            if (!contract.isJsonArray()) continue;
+            for (JsonElement name : contract.getAsJsonArray()) {
+                if (name.getAsJsonObject().has("contractDefinition")) {
+                    for (JsonElement contractWithoutVersion : name.getAsJsonObject().get("contractDefinition").getAsJsonArray()) {
+                        if (contractWithoutVersion.getAsJsonObject().has("name")) {
+                            JsonObject nameAndUUID = new JsonObject();
+                            nameAndUUID.addProperty("name", contractWithoutVersion.getAsJsonObject().get("name").getAsString());
+                            nameAndUUID.addProperty(
+                                    "uuid",
+                                    "uuid:" + uuid + "-" +
+                                            contractWithoutVersion.getAsJsonObject().get("name").getAsString()
+                                                    .replace("./", "")
+                                                    .replace("../", "")
+                                                    .replace("\"", "-")
+                                                    .replace("/", "-")
+                                                    .replace(".sol", "")
+                            );
+                            namesContract.add(nameAndUUID);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private JsonArray inheritance(JsonArray importInheritance) {
+        JsonArray inheritance = new JsonArray();
+        for (JsonElement jelem : importInheritance.getAsJsonArray()) {
+            if (jelem.getAsJsonObject().has("userDefinedTypeName")) {
+                String importName = extractImportName(
+                        jelem.getAsJsonObject()
+                                .get("userDefinedTypeName").getAsJsonArray()
+                                .get(0).getAsJsonObject()
+                                .get("name").getAsString());
+                inheritance.add(searchNameAndInclude(importName));
+            }
+        }
+        return inheritance;
+    }
+
+    private JsonObject analyseIsUsingFor(JsonArray importJson) {
+        JsonObject usingFor = new JsonObject();
+        for (JsonElement jelem : importJson.getAsJsonArray()) {
+            JsonObject obj = jelem.getAsJsonObject();
+            if (obj.has("name")) {
+                usingFor.addProperty("usingForName", obj.get("name").getAsString());
+            } else if (obj.has("typeName")) {
+                JsonObject t = obj.get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                if (t.has("userDefinedTypeName")) {
+                    String value = t.get("userDefinedTypeName").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString();
+                    usingFor.addProperty("isUsingLibrary", searchNameAndInclude(value));
+                } else if (t.has("elementaryTypeName")) {
+                    String value = t.get("elementaryTypeName").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString();
+                    usingFor.add("isUsingLibrary", catalogueElementaryType(value));
+                }
+            }
+        }
+        return usingFor;
+    }
+
+    private JsonObject analyseStructs(JsonArray importJson) {
+        JsonObject struct = new JsonObject();
+        JsonArray elementsInStruct = new JsonArray();
+        for (JsonElement jelem : importJson.getAsJsonArray()) {
+            JsonObject obj = jelem.getAsJsonObject();
+            if (obj.has("name")) {
+                struct.addProperty("structName", obj.get("name").getAsString());
+            } else if (obj.has("variableDeclaration")) {
+                JsonObject structElement = new JsonObject();
+                JsonArray varDecl = obj.get("variableDeclaration").getAsJsonArray();
+                JsonObject typeNameObj = varDecl.get(0).getAsJsonObject().get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                if (typeNameObj.has("mapping")) {
+                    structElement.add("hasNonConstantType",
+                            analyseMapping(typeNameObj.get("mapping").getAsJsonArray()));
+                    structElement.get("hasNonConstantType").getAsJsonObject()
+                            .addProperty("structAttributeName", varDecl.get(1).getAsJsonObject().get("name").getAsString());
+                    structElement.get("hasNonConstantType").getAsJsonObject().addProperty("@type", "MapType");
+                    elementsInStruct.add(structElement);
+                } else if (typeNameObj.has("elementaryTypeName")) {
+                    String typeElement = typeNameObj.get("elementaryTypeName").getAsJsonArray()
+                            .get(0).getAsJsonObject().get("text").getAsString();
+                    structElement.add("hasNonConstantType", catalogueElementaryType(typeElement));
+                    structElement.get("hasNonConstantType").getAsJsonObject()
+                            .addProperty("structAttributeName", varDecl.get(1).getAsJsonObject().get("name").getAsString());
+                    elementsInStruct.add(structElement);
+                } else if (typeNameObj.has("typeName")) {
+                    structElement.add("hasNonConstantType",
+                            analyseArrays(typeNameObj.get("typeName").getAsJsonArray()));
+                    structElement.get("hasNonConstantType").getAsJsonObject()
+                            .addProperty("structAttributeName", varDecl.get(1).getAsJsonObject().get("name").getAsString());
+                    elementsInStruct.add(structElement);
+                }
+            }
+        }
+        struct.add("hasNonConstantStructAttribute", elementsInStruct);
+        return struct;
+    }
+
+    private JsonObject analyseArrays(JsonArray importJson) {
+        JsonObject constantType = new JsonObject();
+        JsonObject nonConstantType = new JsonObject();
+        JsonObject nonConstantTypeRelation = new JsonObject();
+        for (JsonElement arrayElem : importJson) {
+            JsonObject obj = arrayElem.getAsJsonObject();
+            if (obj.has("isArray")) {
+                constantType.addProperty("@type", "ArrayType");
+            } else if (obj.has("typeName")) {
+                JsonObject typeName = obj.get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                if (typeName.has("elementaryTypeName")) {
+                    String attributeType = typeName.get("elementaryTypeName").getAsJsonArray()
+                            .get(0).getAsJsonObject().get("text").getAsString();
+                    nonConstantTypeRelation.add("@type", catalogueElementaryType(attributeType));
+                } else if (typeName.has("userDefinedTypeName")) {
+                    String value = typeName.get("userDefinedTypeName").getAsJsonArray()
+                            .get(0).getAsJsonObject().get("name").getAsString();
+                    nonConstantTypeRelation.addProperty("@type", searchNameAndInclude(value));
+                } else {
+                    nonConstantTypeRelation.add("hasType",
+                            analyseArrays(typeName.get("typeName").getAsJsonArray()));
+                }
+            }
+        }
+        nonConstantType.add("hasNonConstantType", nonConstantTypeRelation);
+        constantType.add("hasNonConstantType", nonConstantType);
+        return constantType;
+    }
+
+    private String searchNameAndInclude(String value) {
+        String valueName = "";
+        boolean found = false;
+        for (JsonElement name : namesContract) {
+            if (value.contentEquals(name.getAsJsonObject().get("name").getAsString())) {
+                valueName = name.getAsJsonObject().get("uuid").getAsString();
+                found = true;
+            }
+        }
+        if (!found) {
+            JsonObject newName = new JsonObject();
+            valueName = "uuid:" + UUID.randomUUID().toString() + "-" +
+                    value.replace("./", "")
+                         .replace("../", "")
+                         .replace("\"", "-")
+                         .replace("/", "-")
+                         .replace(".sol", "");
+            newName.addProperty("name", value);
+            newName.addProperty("uuid", valueName);
+            namesContract.add(newName);
+        }
+        return valueName;
+    }
+
+    private JsonObject catalogueElementaryType(String value) {
+        JsonObject typeElementObject = new JsonObject();
+        if (value.contains("bytes") || value.contains("int")) {
+            String[] bytesNumber = splitBytesAndNumber(value);
+            typeElementObject.addProperty("@type", bytesNumber[0]);
+            if (bytesNumber[1].isEmpty() && value.contains("bytes")) {
+                bytesNumber[1] = "32";
+            } else if (bytesNumber[1].isEmpty() && value.contains("int")) {
+                bytesNumber[1] = "256";
+            }
+            typeElementObject.addProperty("memory", Integer.parseInt(bytesNumber[1]));
+        } else {
+            typeElementObject.addProperty("@type", value);
+        }
+        return typeElementObject;
+    }
+
+    public String extractImportName(String importFullName) {
+        int lastSlashIndex = importFullName.lastIndexOf('/');
+        String importName = (lastSlashIndex == -1) ? importFullName : importFullName.substring(lastSlashIndex + 1);
+        int lastDotIndex = importName.lastIndexOf('.');
+        if (lastDotIndex != -1) {
+            importName = importName.substring(0, lastDotIndex);
+        }
+        return importName;
+    }
+
+    private JsonObject analyseImports(JsonArray importJson) {
+        JsonArray names = new JsonArray();
+        JsonObject from = new JsonObject();
+        for (JsonElement jelem : importJson.getAsJsonArray()) {
+            JsonObject obj = jelem.getAsJsonObject();
+            if (obj.has("importDeclaration")) {
+                String importName = extractImportName(
+                        obj.get("importDeclaration").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString());
+                names.add(searchNameAndInclude(importName));
+            }
+            if (obj.has("from")) {
+                from.addProperty("from", searchNameAndInclude(obj.get("from").getAsString()));
+            }
+        }
+        from.add("name", names);
+        return from;
+    }
+
+    private JsonObject analyseEvents(JsonArray importEvent) {
+        JsonObject event = new JsonObject();
+        JsonArray eventArguments = new JsonArray();
+        for (JsonElement jelem : importEvent.getAsJsonArray()) {
+            JsonObject obj = jelem.getAsJsonObject();
+            if (obj.has("name")) {
+                event.addProperty("name", obj.get("name").getAsString());
+            } else if (obj.has("eventParameterList")) {
+                int position = 0;
+                for (JsonElement jparam : obj.get("eventParameterList").getAsJsonArray()) {
+                    JsonObject eventArgument = new JsonObject();
+                    eventArgument.addProperty("hasParameterPosition", position);
+                    JsonObject pObj = jparam.getAsJsonObject();
+                    if (pObj.has("eventParameter")) {
+                        for (JsonElement jEventParam : pObj.get("eventParameter").getAsJsonArray()) {
+                            JsonObject ep = jEventParam.getAsJsonObject();
+                            if (ep.has("name")) {
+                                eventArgument.addProperty("hasParameterName", ep.get("name").getAsString());
+                            } else if (ep.has("text")) {
+                                if (ep.get("text").getAsString().contentEquals("indexed")) {
+                                    eventArgument.addProperty("isIndexed", true);
+                                } else {
+                                    eventArgument.addProperty("isIndexed", false);
+                                }
+                            } else if (ep.has("typeName")) {
+                                JsonObject parameterArgumentType = new JsonObject();
+                                boolean isArray = false;
+                                for (JsonElement jEventTypeNameParam : ep.get("typeName").getAsJsonArray()) {
+                                    JsonObject et = jEventTypeNameParam.getAsJsonObject();
+                                    if (et.has("elementaryTypeName")) {
+                                        if (et.get("elementaryTypeName").getAsJsonArray().get(0).getAsJsonObject().has("text")) {
+                                            parameterArgumentType = catalogueElementaryType(
+                                                    et.get("elementaryTypeName").getAsJsonArray().get(0)
+                                                            .getAsJsonObject().get("text").getAsString());
+                                        }
+                                    } else if (et.has("userDefinedTypeName")) {
+                                        if (et.get("userDefinedTypeName").getAsJsonArray().get(0).getAsJsonObject().has("name")) {
+                                            parameterArgumentType.addProperty(
+                                                    "@type",
+                                                    searchNameAndInclude(
+                                                            et.get("userDefinedTypeName").getAsJsonArray().get(0)
+                                                                    .getAsJsonObject().get("name").getAsString()));
+                                        }
+                                    } else if (et.has("typeName") || isArray) {
+                                        if (!isArray) {
+                                            JsonObject innerType = et.get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                                            if (innerType.has("userDefinedTypeName")) {
+                                                parameterArgumentType.addProperty("hasType",
+                                                        innerType.get("userDefinedTypeName").getAsJsonArray().get(0)
+                                                                .getAsJsonObject().get("name").getAsString());
+                                            } else if (innerType.has("elementaryTypeName")) {
+                                                parameterArgumentType = catalogueElementaryType(
+                                                        innerType.get("elementaryTypeName").getAsJsonArray().get(0)
+                                                                .getAsJsonObject().get("text").getAsString());
+                                            }
+                                        }
+                                        isArray = true;
+                                        if (et.has("isArray")) {
+                                            parameterArgumentType.addProperty("@type", "ArrayType");
+                                            isArray = false;
+                                        }
+                                    }
+                                }
+                                eventArgument.add("hasParameterType", parameterArgumentType);
+                            }
+                        }
+                    }
+                    position++;
+                    eventArguments.add(eventArgument);
+                }
+                event.add("hasEventArguments", eventArguments);
+            } else if (obj.has("text")) {
+                if (obj.get("text").getAsString().contentEquals("anonymous")) {
+                    event.addProperty("isAnonymous", true);
+                } else {
+                    event.addProperty("isAnonymous", false);
+                }
+            }
+        }
+        if (!eventArguments.isEmpty()) {
+            event.add("hasEventArguments", eventArguments);
+        }
+        return event;
+    }
+
+    private JsonObject analyseModifier(JsonArray importModifier) {
+        JsonObject modifier = new JsonObject();
+        for (JsonElement jelem : importModifier.getAsJsonArray()) {
+            JsonObject obj = jelem.getAsJsonObject();
+            if (obj.has("name")) {
+                modifier.addProperty("modifierName", obj.get("name").getAsString());
+            } else if (obj.has("code")) {
+                modifier.addProperty("modifierCode", obj.get("code").getAsString());
+            } else if (obj.has("parameterList")) {
+                modifier.add("hasModifierArgument",
+                        analyseInputParam(obj.get("parameterList").getAsJsonArray()));
+            } else if (obj.has("text")) {
+                if (obj.get("text").getAsString().contains("virtual") ||
+                        obj.get("text").getAsString().contains("override")) {
+                    modifier.addProperty("hasModifierBehaviour", obj.get("text").getAsString());
+                }
+            }
+        }
+        return modifier;
+    }
+
+    private JsonObject analyseEnum(JsonArray importEvent) {
+        JsonObject event = new JsonObject();
+        JsonObject option = new JsonObject();
+        JsonArray options = new JsonArray();
+        for (JsonElement jelem : importEvent.getAsJsonArray()) {
+            JsonObject obj = jelem.getAsJsonObject();
+            if (obj.has("name")) {
+                event.addProperty("hasName", obj.get("name").getAsString());
+            } else if (obj.has("enumValue")) {
+                options.add(obj.get("enumValue").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString());
+            }
+        }
+        option.add("option", options);
+        event.add("hasNonConstantType", option);
+        return event;
+    }
+
+    private JsonObject analyseFunction(JsonArray importFunction) {
+        JsonObject function = new JsonObject();
+        JsonObject first = importFunction.getAsJsonArray().get(0).getAsJsonObject();
+        if (first.get("functionDescriptor").getAsJsonArray().get(0).getAsJsonObject()
+                .get("text").getAsString().contentEquals("function")) {
+
+            for (JsonElement jelem : importFunction.getAsJsonArray()) {
+                JsonObject obj = jelem.getAsJsonObject();
+                if (obj.has("functionDescriptor")) {
+                    JsonArray fd = obj.get("functionDescriptor").getAsJsonArray();
+                    if (fd.size() > 1 && fd.get(1).getAsJsonObject().has("name")) {
+                        String nameFunction = fd.get(1).getAsJsonObject().get("name").getAsString();
+                        function.addProperty("functionName", nameFunction);
+                    }
+                } else if (obj.has("code")) {
+                    function.addProperty("functionCode", obj.get("code").getAsString());
+                } else if (obj.has("modifierList")) {
+                    function.add("hasFunctionBehaviour",
+                            analyseModifiersParam(obj.get("modifierList").getAsJsonArray()));
+                } else if (obj.has("parameterList")) {
+                    function.add("hasFunctionArguments",
+                            analyseInputParam(obj.get("parameterList").getAsJsonArray()));
+                } else if (obj.has("returnParameters")) {
+                    function.add("hasFunctionReturn",
+                            analyseInputParam(obj.get("returnParameters").getAsJsonArray()
+                                    .get(0).getAsJsonObject()
+                                    .get("parameterList").getAsJsonArray()));
+                }
+            }
+        }
+        return function;
+    }
+
+    private JsonObject analyseModifiersParam(JsonArray importJson) {
+        JsonObject modifiersList = new JsonObject();
+        JsonObject modifierSpec = new JsonObject();
+        for (JsonElement jelemList : importJson.getAsJsonArray()) {
+            JsonObject obj = jelemList.getAsJsonObject();
+            if (obj.has("text")) {
+                modifiersList.addProperty("hasFunctionVisibility", obj.get("text").getAsString());
+            } else if (obj.has("modifierInvocation")) {
+                modifierSpec.addProperty("modifierName",
+                        obj.get("modifierInvocation").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString());
+            } else if (obj.has("stateMutability")) {
+                modifiersList.addProperty("@type",
+                        obj.get("stateMutability").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString());
+            } else if (obj.has("overrideSpecifier")) {
+                modifierSpec.addProperty("hasModifierBehaviour",
+                        obj.get("overrideSpecifier").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString());
+            }
+        }
+        if (!modifiersList.has("hasFunctionVisibility")) {
+            modifiersList.addProperty("hasFunctionVisibility", "public");
+        }
+        if (!modifiersList.has("@type")) {
+            modifiersList.addProperty("@type", "public");
+        }
+        if (!modifierSpec.entrySet().isEmpty()) {
+            modifiersList.add("isDefinedAs", modifierSpec);
+        }
+        return modifiersList;
+    }
+
+    private JsonArray analyseInputParam(JsonArray importJson) {
+        JsonArray paramsList = new JsonArray();
+        int position = 0;
+        for (JsonElement jelemList : importJson.getAsJsonArray()) {
+            JsonObject param = new JsonObject();
+            JsonObject listObj = jelemList.getAsJsonObject();
+            if (!listObj.has("parameter")) continue;
+            for (JsonElement jelem : listObj.get("parameter").getAsJsonArray()) {
+                JsonObject p = jelem.getAsJsonObject();
+                if (p.has("name")) {
+                    param.addProperty("hasParameterName", p.get("name").getAsString());
+                } else if (p.has("storageLocation")) {
+                    param.addProperty("hasParameterTypeWithDataLocation",
+                            p.get("storageLocation").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString());
+                } else if (p.has("typeName")) {
+                    JsonObject tn = p.get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                    if (tn.has("userDefinedTypeName")) {
+                        String name = tn.get("userDefinedTypeName").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString();
+                        param.addProperty("hasParameterType", searchNameAndInclude(name));
+                    } else if (tn.has("elementaryTypeName")) {
+                        String name = tn.get("elementaryTypeName").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString();
+                        param.add("hasParameterType", catalogueElementaryType(name));
+                    } else if (tn.has("typeName")) {
+                        param.add("hasParameterType", analyseArrays(tn.get("typeName").getAsJsonArray()));
+                    } else if (tn.has("mapping")) {
+                        param.add("hasParameterType", analyseMapping(tn.get("mapping").getAsJsonArray()));
+                    }
+                }
+            }
+            param.addProperty("hasParameterPosition", position);
+            position++;
+            paramsList.add(param);
+        }
+        return paramsList;
+    }
+
+    private JsonObject analyseReceive(JsonArray importReceive) {
+        JsonObject modifier = new JsonObject();
+        JsonObject first = importReceive.getAsJsonArray().get(0).getAsJsonObject();
+        if (first.get("functionDescriptor").getAsJsonArray().get(0).getAsJsonObject()
+                .get("text").getAsString().contentEquals("receive")) {
+            for (JsonElement jelem : importReceive.getAsJsonArray()) {
+                JsonObject obj = jelem.getAsJsonObject();
+                if (obj.has("code")) {
+                    modifier.addProperty("receiveCode", obj.get("code").getAsString());
+                } else {
+                    modifier.addProperty("hasReceiveBehaviour", "payable");
+                    modifier.addProperty("hasReceiveVisibility", "external");
+                }
+            }
+        }
+        return modifier;
+    }
+
+    private JsonObject analyseFallback(JsonArray importFallback) {
+        JsonObject modifier = new JsonObject();
+        JsonObject first = importFallback.getAsJsonArray().get(0).getAsJsonObject();
+        if (first.get("functionDescriptor").getAsJsonArray().get(0).getAsJsonObject()
+                .get("text").getAsString().contentEquals("fallback")) {
+            for (JsonElement jelem : importFallback.getAsJsonArray()) {
+                JsonObject obj = jelem.getAsJsonObject();
+                if (obj.has("code")) {
+                    modifier.addProperty("fallbackCode", obj.get("code").getAsString());
+                } else {
+                    modifier.addProperty("hasFallbackBehaviour", "payable");
+                    modifier.addProperty("hasFallbackVisibility", "external");
+                }
+            }
+        }
+        return modifier;
+    }
+
+    private JsonObject analyseConstructor(JsonArray importConstructor) {
+        JsonObject constructor = new JsonObject();
+        JsonObject first = importConstructor.getAsJsonArray().get(0).getAsJsonObject();
+        if (first.get("functionDescriptor").getAsJsonArray().get(0).getAsJsonObject()
+                .get("text").getAsString().contentEquals("constructor")) {
+            for (JsonElement jelem : importConstructor.getAsJsonArray()) {
+                JsonObject obj = jelem.getAsJsonObject();
+                if (obj.has("code")) {
+                    constructor.addProperty("constructorCode", obj.get("code").getAsString());
+                } else if (obj.has("parameterList")) {
+                    constructor.add("hasConstructorArguments",
+                            analyseInputParam(obj.get("parameterList").getAsJsonArray()));
+                }
+            }
+        }
+        return constructor;
+    }
+
+    private JsonObject analyseAttribute(JsonArray importAttribute) {
+        JsonObject attribute = new JsonObject();
+        String type = "";
+        for (JsonElement jelem : importAttribute.getAsJsonArray()) {
+            JsonObject obj = jelem.getAsJsonObject();
+            if (obj.has("visibility")) {
+                attribute.addProperty("hasAttributeVisibility", obj.get("visibility").getAsString());
+            } else if (obj.has("name")) {
+                attribute.addProperty("attributeName", obj.get("name").getAsString());
+            } else if (obj.has("value")) {
+                JsonObject newValue = new JsonObject();
+                if (type.contentEquals("int") || type.contentEquals("uint")) {
+                    newValue.addProperty("simpleInt", obj.get("value").getAsString());
+                } else if (type.contentEquals("bool")) {
+                    newValue.addProperty("simpleString", obj.get("value").getAsBoolean());
+                } else if (type.contentEquals("address") || type.contentEquals("string") || type.contentEquals("bytes")) {
+                    newValue.addProperty("simpleString", obj.get("value").getAsString());
+                } else {
+                    newValue.addProperty("simpleGeneric", obj.get("value").getAsString());
+                }
+                attribute.add("hasAttributeValue", newValue);
+            } else if (obj.has("typeName")) {
+                JsonObject typeName = obj.get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                if (typeName.has("userDefinedTypeName")) {
+                    JsonObject typeUDT = new JsonObject();
+                    typeUDT.addProperty("@type",
+                            searchNameAndInclude(typeName.get("userDefinedTypeName").getAsJsonArray().get(0)
+                                    .getAsJsonObject().get("name").getAsString()));
+                    attribute.add("hasNonConstantType", typeUDT);
+                } else if (typeName.has("mapping")) {
+                    JsonObject nonConstantTypeMapping = analyseMapping(typeName.get("mapping").getAsJsonArray());
+                    nonConstantTypeMapping.addProperty("@type", "MapType");
+                    attribute.add("hasConstantType", nonConstantTypeMapping);
+                } else if (typeName.has("elementaryTypeName")) {
+                    String attributeType = typeName.get("elementaryTypeName").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString();
+                    attribute.addProperty("@type", "nonConstantAttributeSpecification");
+                    attribute.add("hasNonConstantType", catalogueElementaryType(attributeType));
+                    type = attributeType;
+                } else {
+                    JsonObject constantType = new JsonObject();
+                    JsonObject nonConstantType = new JsonObject();
+                    JsonObject nonConstantTypeRelation = new JsonObject();
+                    for (JsonElement arrayElem : obj.get("typeName").getAsJsonArray()) {
+                        JsonObject ae = arrayElem.getAsJsonObject();
+                        if (ae.has("isArray")) {
+                            constantType.addProperty("@type", "ArrayType");
+                        } else if (ae.has("typeName")) {
+                            JsonObject innerTn = ae.get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                            if (innerTn.has("elementaryTypeName")) {
+                                String attributeType = innerTn.get("elementaryTypeName").getAsJsonArray()
+                                        .get(0).getAsJsonObject().get("text").getAsString();
+                                nonConstantTypeRelation.add("hasNonConstantType", catalogueElementaryType(attributeType));
+                            } else if (innerTn.has("userDefinedTypeName")) {
+                                String value = innerTn.get("userDefinedTypeName").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString();
+                                nonConstantTypeRelation.addProperty("hasNonConstantType", searchNameAndInclude(value));
+                            }
+                        }
+                    }
+                    nonConstantType.add("hasNonConstantType", nonConstantTypeRelation);
+                    constantType.add("hasNonConstantType", nonConstantType);
+                    attribute.add("hasConstantType", constantType);
+                }
+            } else if (obj.has("isImmutable")) {
+                attribute.addProperty("isInmutable", obj.get("isImmutable").getAsBoolean());
+            } else if (obj.has("isConstant")) {
+                attribute.addProperty("isConstant", obj.get("isConstant").getAsBoolean());
+            }
+        }
+        return attribute;
+    }
+
+    private JsonObject analyseMapping(JsonArray input) {
+        JsonObject nonConstantTypeMapping = new JsonObject();
+        for (JsonElement mappingElement : input) {
+            JsonObject me = mappingElement.getAsJsonObject();
+            if (me.has("elementaryTypeName")) {
+                nonConstantTypeMapping.addProperty("hasKeyMap",
+                        me.get("elementaryTypeName").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString());
+            } else if (me.has("typeName")) {
+                JsonObject tn = me.get("typeName").getAsJsonArray().get(0).getAsJsonObject();
+                if (tn.has("elementaryTypeName")) {
+                    String attributeType = tn.get("elementaryTypeName").getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString();
+                    nonConstantTypeMapping.add("hasValueMap", catalogueElementaryType(attributeType));
+                } else if (tn.has("userDefinedTypeName")) {
+                    nonConstantTypeMapping.addProperty("hasValueMap",
+                            searchNameAndInclude(tn.get("userDefinedTypeName").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString()));
+                } else if (tn.has("mapping")) {
+                    nonConstantTypeMapping.add("hasValueMap", analyseMapping(tn.get("mapping").getAsJsonArray()));
+                    nonConstantTypeMapping.get("hasValueMap").getAsJsonObject().addProperty("@type", "MapType");
+                } else {
+                    nonConstantTypeMapping.add("hasParameterType", analyseArrays(tn.get("typeName").getAsJsonArray()));
+                }
+            }
+        }
+        return nonConstantTypeMapping;
+    }
+
+    public String[] splitBytesAndNumber(String entrada) {
+        String parteNoNumerica = entrada.replaceAll("[0-9]", "");
+        String parteNumerica = entrada.replaceAll("[^0-9]", "");
+        return new String[]{parteNoNumerica, parteNumerica};
+    }
 
     private String sha256Hex(String input) {
         try {
@@ -104,839 +1334,5 @@ public class JsonParserToJSONOnto {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public String JsonContractToJavaObject(String contractInJSON, String contractHash) {
-        implementationSpecificationList = new ArrayList<>();
-        versionList = new ArrayList<>();
-        importList = new ArrayList<>();
-        resetSpecifications();
-
-        contractAntlrFormat = SolidityToJSONParser.contractJsonObject(contractInJSON);
-        String id;
-        if (contractHash != null && !contractHash.isBlank()) {
-            id = contractHash;
-        } else {
-            id = "solidity:contract:" + sha256Hex(contractInJSON);
-        }
-        JsonArray contractArray = contractAntlrFormat.get("sourceUnit").getAsJsonArray();
-        boolean resetNeeded = false;
-        for (int i = 0; i < contractArray.size(); i++) {
-            StringBuilder sb = new StringBuilder();
-            JsonObject contractI = contractArray.get(i).getAsJsonObject();
-            String keyArray = contractI.keySet().iterator().next();
-            if (keyArray.contentEquals(Tokens.pragmaDirective)) {
-                String version = solidityVersion(contractI.get(keyArray).getAsJsonArray());
-                if (version.contains("ABIEncoderV2")) {
-                    versionList.add(version.substring(0, version.length() - 1));
-                } else {
-                    versionList = new ArrayList<>();
-                    versionList.add(version.substring(0, version.length() - 1));
-                }
-            }
-            if (keyArray.contentEquals(Tokens.IMPORTDIRECTIVE)) {
-                solidityImports(contractI);
-            }
-            if (keyArray.contentEquals(Tokens.CONTRACTDEFINITION)) {
-                implementationSpecification.setHasContractName(solidityContract(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray()));
-
-                solidityInheritance(sb.append("urn:").append(id).append(":").toString(), contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray());
-                sb = new StringBuilder();
-                solidityUsingFor(sb.append("urn:").append(id).append(":").toString(), contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray());
-                sb.append(implementationSpecification.getHasContractName());
-                solidityAttributes(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray());
-                solidityConstructor(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray());
-                solidityFunctions(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray());
-                solidityModifiers(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray());
-                solidityEvents(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray());
-                resetNeeded = true;
-            }
-            if (keyArray.contentEquals(Tokens.structDefinition)) {
-                try {
-                    attributeSpecification = new AttributeSpecification();
-                    sb = new StringBuilder();
-                    JsonNode structNode = new ObjectMapper().readTree(contractI.toString());
-                    attributeSpecification = solidityStructAttributes(structNode);
-                    sb.append("urn:").append(id).append(":").append(attributeSpecification.getHasName());
-                    structSpecification.setHasName(attributeSpecification.getHasName());
-                    implementationSpecification.setStructSpecification(structSpecification);
-                    implementationSpecification.setId(sb.toString());
-                    implementationSpecificationList.add(implementationSpecification);
-                    resetSpecifications();
-                } catch (JsonProcessingException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (resetNeeded) {
-                resetNeeded = false;
-                if (contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString().contentEquals("abstract")) {
-                    contractSpecification.setAbstract(true);
-                }
-                if (isLibrary(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray())) {
-                    librarySpecification.setHasImports(importList);
-                    librarySpecification.setHasVersion(versionList);
-                    librarySpecification.setHasUsingFor(usingForSpecificationList);
-                    librarySpecification.setHasAttributes(attributeSpecificationList);
-                    librarySpecification.setHasFunctions(functionSpecificationList);
-                    librarySpecification.setHasModifier(modifierSpecificationList);
-                    librarySpecification.setHasEvents(eventSpecificationList);
-                    implementationSpecification.setLibrarySpecification(librarySpecification);
-                } else if (isInterface(contractI.get(Tokens.CONTRACTDEFINITION).getAsJsonArray())) {
-                    interfaceSpecification.setHasImports(importList);
-                    interfaceSpecification.setHasVersion(versionList);
-                    interfaceSpecification.setHasFunctions(functionSpecificationList);
-                    interfaceSpecification.setHasEvents(eventSpecificationList);
-                    implementationSpecification.setInterfaceSpecification(interfaceSpecification);
-                } else {
-                    contractSpecification.setHasImports(importList);
-                    contractSpecification.setHasVersion(versionList);
-                    contractSpecification.setHasInheritance(inheritanceList);
-                    contractSpecification.setHasUsingFor(usingForSpecificationList);
-                    contractSpecification.setHasAttributes(attributeSpecificationList);
-                    contractSpecification.setHasConstructor(constructorSpecification);
-                    contractSpecification.setHasFunctions(functionSpecificationList);
-                    contractSpecification.setHasModifier(modifierSpecificationList);
-                    contractSpecification.setHasEvents(eventSpecificationList);
-                    implementationSpecification.setContractSpecification(contractSpecification);
-                }
-                implementationSpecification.setId(sb.toString());
-                implementationSpecificationList.add(implementationSpecification);
-                resetSpecifications();
-            }
-        }
-
-        if (implementationSpecificationList.isEmpty()) {
-            return "{}";
-        }
-        ImplementationSpecification impl = implementationSpecificationList.get(implementationSpecificationList.size() - 1);
-        return finalContract(impl);
-    }
-
-    public boolean isLibrary(JsonArray json) {
-        return json.get(0).getAsJsonObject().get(Tokens.text).getAsString().contains("library");
-    }
-
-    public boolean isInterface(JsonArray json) {
-        return json.get(0).getAsJsonObject().get(Tokens.text).getAsString().contains("interface");
-    }
-
-    public void resetSpecifications() {
-        importList = new ArrayList<>();
-        contractSpecification = new ContractSpecification();
-        librarySpecification = new LibrarySpecification();
-        interfaceSpecification = new InterfaceSpecification();
-        implementationSpecification = new ImplementationSpecification();
-        constructorSpecification = new ConstructorSpecification();
-        usingForSpecificationList = new ArrayList<>();
-        attributeSpecificationList = new ArrayList<>();
-        functionSpecificationList = new ArrayList<>();
-        modifierSpecificationList = new ArrayList<>();
-        eventSpecificationList = new ArrayList<>();
-        inheritanceList = new ArrayList<>();
-    }
-
-    public String finalContract(ImplementationSpecification impl) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(Include.NON_NULL).setSerializationInclusion(Include.NON_EMPTY);
-
-        try {
-            ContractSpecification cs = impl.getContractSpecification();
-
-            ObjectNode root = mapper.createObjectNode();
-            root.put("@context", "https://raw.githubusercontent.com/oeg-upm/Sancus/refs/heads/main/context/Solidity.json");
-            if (impl.getId() != null) {
-                root.put("@id", impl.getId());
-            }
-            if (impl.getHasContractName() != null) {
-                root.put("contractName", impl.getHasContractName());
-            }
-            if (cs != null) {
-                if (cs.getHasVersion() != null && !cs.getHasVersion().isEmpty()) {
-                    root.put("version", cs.getHasVersion().get(0));
-                }
-                if (cs.getHasInheritance() != null && !cs.getHasInheritance().isEmpty()) {
-                    root.set("inheritance", mapper.valueToTree(cs.getHasInheritance()));
-                }
-                if (cs.getHasImports() != null && !cs.getHasImports().isEmpty()) {
-                    root.set("hasImport", mapper.valueToTree(cs.getHasImports()));
-                }
-                if (cs.getHasAttributes() != null && !cs.getHasAttributes().isEmpty()) {
-                    root.set("hasContractAttribute", mapper.valueToTree(cs.getHasAttributes()));
-                }
-                if (cs.getHasFunctions() != null && !cs.getHasFunctions().isEmpty()) {
-                    root.set("hasImplementationFunction", mapper.valueToTree(cs.getHasFunctions()));
-                }
-                if (cs.getHasModifier() != null && !cs.getHasModifier().isEmpty()) {
-                    root.set("hasImplementationModifier", mapper.valueToTree(cs.getHasModifier()));
-                }
-                if (cs.getHasEvents() != null && !cs.getHasEvents().isEmpty()) {
-                    root.set("hasImplementationEvent", mapper.valueToTree(cs.getHasEvents()));
-                }
-                if (cs.getHasConstructor() != null) {
-                    root.set("hasContractConstructor", mapper.valueToTree(cs.getHasConstructor()));
-                }
-                if (cs.isAbstract()) {
-                    root.put("isAbstract", true);
-                }
-            }
-
-            return mapper.writeValueAsString(root);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            return "Error";
-        }
-    }
-
-    public String solidityVersion(JsonArray entireContract) {
-        String value = "";
-        try {
-            JsonNode jsonNode = new ObjectMapper().readTree(entireContract.get(2).toString());
-            List<String> versionValues = jsonNode.findValuesAsText(Tokens.text);
-            for (int i = 0; i < versionValues.size(); i++) {
-                value += versionValues.get(i) + " ";
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        return value;
-    }
-
-    private void solidityImports(JsonObject entireContract) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(entireContract.toString());
-            List<JsonNode> importValue = jsonNode.findValues(Tokens.text);
-            StringBuilder importString = new StringBuilder();
-            for (int i = 1; i < importValue.size() - 1; i++) {
-                importString.append(importValue.get(i).asText());
-                if (i != importValue.size() - 1) {
-                    importString.append(" ");
-                }
-            }
-            importList.add(importString.toString());
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void solidityInheritance(String URI, JsonArray asJsonArray) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(asJsonArray.toString());
-            List<JsonNode> functionValue = jsonNode.findParents(Tokens.inheritanceSpecifier);
-            for (int i = 0; i < functionValue.size(); i++) {
-                inheritanceList.add(URI + functionValue.get(i).findParents(Tokens.text).get(0).get(Tokens.text).asText());
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public String solidityContract(JsonArray entireContract) {
-        String value = "";
-        for (int i = 0; i < entireContract.size(); i++) {
-            String keyArray = entireContract.get(i).getAsJsonObject().keySet().iterator().next();
-            if (keyArray.contentEquals(Tokens.identifier)) {
-                value = entireContract.get(i).getAsJsonObject().get(keyArray).getAsJsonArray().get(0).getAsJsonObject().get("text").getAsString();
-            }
-        }
-        return value;
-    }
-
-    public void solidityConstructor(JsonArray entireContract) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(entireContract.toString());
-            List<JsonNode> functionValue = jsonNode.findParents(Tokens.functionDefinition);
-            for (int i = 0; i < functionValue.size(); i++) {
-                List<JsonNode> constructorDescriptor = jsonNode.findParents(Tokens.functionDescriptor);
-                if (constructorDescriptor.get(i).findValue(Tokens.text).asText().contentEquals(Tokens.constructor)) {
-                    List<JsonNode> codeValue = functionValue.get(i).findParents(Tokens.statement);
-                    constructorSpecification.setHasCode(getCode(codeValue, i));
-                    JsonNode parameterValues = functionValue.get(i).findParent(Tokens.parametersList);
-                    constructorSpecification.setHasConstructorArguments(solidityParameters(parameterValues));
-                }
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void solidityUsingFor(String URI, JsonArray entireContract) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(entireContract.toString());
-            List<JsonNode> variableValue = jsonNode.findParents(Tokens.USINGFORDECLARATION);
-            for (int i = 0; i < variableValue.size(); i++) {
-                usingForSpecification = new UsingForSpecification();
-                usingForSpecification.setLibrary(URI + variableValue.get(i).findParent(Tokens.identifier).findParent(Tokens.text).get(Tokens.text).asText());
-                List<JsonNode> getType = variableValue.get(i).findValues(Tokens.text);
-                usingForSpecification.setType(getType.get(getType.size() - 2).asText());
-                usingForSpecificationList.add(i, usingForSpecification);
-            }
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void solidityAttributes(JsonArray entireContract) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(entireContract.toString());
-            List<JsonNode> variableValue = jsonNode.findParents(Tokens.stateVariableDeclaration);
-            for (int i = 0; i < variableValue.size(); i++) {
-                attributeSpecification = new AttributeSpecification();
-                String attributeType = defineAttributeType(variableValue.get(i));
-                if (attributeType.contentEquals("Array")) {
-                    attributeSpecification.setHasArrayType(completeArrayAttribute(variableValue.get(i)));
-                    if (defineArrayType(variableValue.get(i)).contentEquals("constant")) {
-                        attributeSpecification.setHasName(variableValue.get(i).findParent(Tokens.identifier).findValue(Tokens.text).asText());
-                    } else {
-                        attributeSpecification.setHasName(variableValue.get(i).findParents(Tokens.identifier).get(1).findValue(Tokens.text).asText());
-                    }
-                } else if (attributeType.contentEquals("NonConstantAttribute")) {
-                    attributeSpecification.setHasNonConstantAttribute(completeNonConstantAttribute(variableValue, i));
-                    attributeSpecification.setHasName(variableValue.get(i).findParent(Tokens.identifier).findValue(Tokens.text).asText());
-                } else if (attributeType.contentEquals("Mapping")) {
-                    attributeSpecification.setHasMapType(completeMappingAttribute(variableValue.get(i)));
-                    List<JsonNode> mappingIdentifierList = variableValue.get(i).findParents(Tokens.identifier);
-                    attributeSpecification.setHasName(mappingIdentifierList.get(mappingIdentifierList.size() - 1).findValue(Tokens.text).asText());
-                } else {
-                    if (!variableValue.get(i).findValues(Tokens.text).get(variableValue.get(i).findValues(Tokens.text).size() - 1).asText().contentEquals("(")) {
-                        attributeSpecification.setHasNonConstantAttribute(completeUserDefinedAttribute(variableValue.get(i)));
-                        List<JsonNode> getNameAttribute = variableValue.get(i).findParents(Tokens.identifier);
-                        attributeSpecification.setHasName(getNameAttribute.get(getNameAttribute.size() - 1).findValue(Tokens.text).asText());
-                    }
-                }
-                List<JsonNode> optionalDefinitions;
-                if (variableValue.get(i).findParents(Tokens.text).size() >= 3) {
-                    optionalDefinitions = variableValue.get(i).findParents(Tokens.text).subList(0, 3);
-                } else {
-                    optionalDefinitions = variableValue.get(i).findParents(Tokens.text).subList(0, 2);
-                }
-                for (int j = 0; j < optionalDefinitions.size(); j++) {
-                    if (optionalDefinitions.get(j).get(Tokens.text).asText().contentEquals("constant")) {
-                        attributeSpecification.setConstantProperty(true);
-                    }
-                    if (optionalDefinitions.get(j).get(Tokens.text).asText().contentEquals("immutable")) {
-                        attributeSpecification.setImmutableProperty(true);
-                    }
-                    if (optionalDefinitions.get(j).get(Tokens.text).asText().contentEquals("payable")) {
-                        attributeSpecification.setPayableProperty(true);
-                    }
-                }
-                attributeSpecification.setHasValue(attributeValue(variableValue.get(i).findParent("expression")));
-                attributeSpecification.setVisibility(VisibilitySpecification.valueOf(getVisibility(variableValue.get(i)).toUpperCase()));
-                attributeSpecificationList.add(i, attributeSpecification);
-            }
-            List<JsonNode> enumAttribute = jsonNode.findParents(Tokens.enumDefinition);
-            for (int i = 0; i < enumAttribute.size() && enumAttribute.size() > 0; i++) {
-                attributeSpecificationList.add(solidityEnumAttributes(enumAttribute.get(i)));
-            }
-            List<JsonNode> structAttribute = jsonNode.findParents(Tokens.structDefinition);
-            for (int i = 0; i < structAttribute.size() && structAttribute.size() > 0; i++) {
-                attributeSpecificationList.add(solidityStructAttributes(structAttribute.get(i)));
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public String attributeValue(JsonNode values) {
-        if (values != null) {
-            StringBuilder sb = new StringBuilder();
-            List<JsonNode> valueText = values.findParents("text");
-            for (int i = 0; i < valueText.size(); i++) {
-                sb.append(valueText.get(i).get(Tokens.text).asText());
-            }
-            return sb.toString();
-        }
-        return null;
-    }
-
-    public AttributeSpecification solidityEnumAttributes(JsonNode enumDefinition) {
-        attributeSpecification = new AttributeSpecification();
-        enumSpecification = new EnumSpecification();
-        ArrayList<Object> toIntroduce = new ArrayList<>();
-        attributeSpecification.setHasName(enumDefinition.findParent(Tokens.identifier).findValue(Tokens.text).asText());
-        List<JsonNode> enumAttribute = enumDefinition.findParents(Tokens.enumValue);
-        for (int i = 0; i < enumAttribute.size(); i++) {
-            toIntroduce.add(i, enumAttribute.get(i).findValue(Tokens.text).asText());
-        }
-        enumSpecification.setOptions(toIntroduce);
-        attributeSpecification.setHasEnumAttribute(enumSpecification);
-        return attributeSpecification;
-    }
-
-    public String defineAttributeType(JsonNode jsonNode) {
-        if (isMapping(jsonNode)) {
-            return "Mapping";
-        } else if (isArray(jsonNode)) {
-            return "Array";
-        } else if (isNonConstant(jsonNode)) {
-            return "NonConstantAttribute";
-        } else {
-            return "userDefined";
-        }
-    }
-
-    public String defineArrayType(JsonNode jsonNode) {
-        if (jsonNode.findParents(Tokens.identifier).size() > 1) {
-            return "Array";
-        } else {
-            return "constant";
-        }
-    }
-
-    public boolean isArray(JsonNode jsonNode) {
-        if (jsonNode.findParents(Tokens.typeName).get(0).findParents(Tokens.type).size() > 1) {
-            List<JsonNode> checkArray = jsonNode.findParents(Tokens.typeName).get(0).findParents(Tokens.type);
-            boolean open = false;
-            boolean close = false;
-            for (int i = 0; i < checkArray.size(); i++) {
-                if (checkArray.get(i).findValue(Tokens.text).asText().contains("[")) {
-                    open = true;
-                }
-                if (checkArray.get(i).findValue(Tokens.text).asText().contains("]")) {
-                    close = true;
-                }
-                if (open && close) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public boolean isStruct(JsonNode jsonNode) {
-        return jsonNode.findParent(Tokens.struct) != null;
-    }
-
-    public boolean isMapping(JsonNode jsonNode) {
-        return jsonNode.findParent(Tokens.MAPPING) != null;
-    }
-
-    public boolean isNonConstant(JsonNode jsonNode) {
-        return jsonNode.findParent(Tokens.elementaryTypeName) != null;
-    }
-
-    public MappingSpecification completeMappingAttribute(JsonNode receivedArguments) {
-        mapSpecification = new MappingSpecification();
-
-        List<JsonNode> elementaryTypes = receivedArguments.findParent(Tokens.MAPPING).findParents(Tokens.elementaryTypeName);
-        if (elementaryTypes.size() == 0) {
-            JsonNode userDefined = receivedArguments.findParent(Tokens.MAPPING).findParent(Tokens.userDefinedTypeName);
-            mapSpecification.setHasKeyMap(userDefined.findValue(Tokens.text).asText());
-        } else {
-            mapSpecification.setHasKeyMap(completeNonConstantAttribute(elementaryTypes, 0));
-        }
-        if (receivedArguments.findParent(Tokens.MAPPING).findParent(Tokens.typeName).findParents(Tokens.MAPPING).size() == 1) {
-            List<JsonNode> aa = receivedArguments.findParent(Tokens.MAPPING).findParent(Tokens.typeName).findParents(Tokens.MAPPING);
-            mapSpecification.setHasValueMap(mappingIteration(aa.get(0), new MappingSpecification()));
-        } else if (elementaryTypes.size() == 1) {
-            mapSpecification.setHasValueMap(completeUserDefined(receivedArguments));
-        } else if (elementaryTypes.size() == 0) {
-            JsonNode userDefined = receivedArguments.findParent(Tokens.MAPPING).findParents(Tokens.userDefinedTypeName).get(1);
-            mapSpecification.setHasValueMap(userDefined.findValue(Tokens.text).asText());
-        } else {
-            mapSpecification.setHasValueMap(completeNonConstantAttribute(elementaryTypes, 1));
-        }
-        return mapSpecification;
-    }
-
-    public MappingSpecification mappingIteration(JsonNode receivedArguments, MappingSpecification mapSpecificationIter) {
-        List<JsonNode> elementaryTypes = receivedArguments.findParent(Tokens.MAPPING).findParents(Tokens.elementaryTypeName);
-        if (elementaryTypes.size() == 0) {
-            JsonNode userDefined = receivedArguments.findParent(Tokens.MAPPING).findParent(Tokens.userDefinedTypeName);
-            mapSpecification.setHasKeyMap(userDefined.findValue(Tokens.text).asText());
-        } else {
-            mapSpecification.setHasKeyMap(completeNonConstantAttribute(elementaryTypes, 0));
-        }
-        if (receivedArguments.findParent(Tokens.MAPPING).findParent(Tokens.typeName).findParents(Tokens.MAPPING).size() == 1) {
-            List<JsonNode> aa = receivedArguments.findParent(Tokens.MAPPING).findParent(Tokens.typeName).findParents(Tokens.MAPPING);
-            mapSpecificationIter.setHasValueMap(mappingIteration(aa.get(0), new MappingSpecification()));
-        } else if (elementaryTypes.size() == 1) {
-            mapSpecificationIter.setHasValueMap(completeUserDefined(receivedArguments));
-        } else if (elementaryTypes.size() == 0) {
-            JsonNode userDefined = receivedArguments.findParent(Tokens.MAPPING).findParents(Tokens.userDefinedTypeName).get(1);
-            mapSpecification.setHasValueMap(userDefined.findValue(Tokens.text).asText());
-        } else {
-            mapSpecificationIter.setHasValueMap(completeNonConstantAttribute(elementaryTypes, 1));
-        }
-        return mapSpecificationIter;
-    }
-
-    public ArraySpecification completeArrayAttribute(JsonNode receivedArgument) {
-        arraySpecification = new ArraySpecification();
-        arrayDimensionSpecificationList = new ArrayList<>();
-        List<JsonNode> getLength = receivedArgument.findParents(Tokens.numberLiteral);
-        for (int i = 0; i < getLength.size(); i++) {
-            arrayDimensionSpecification = new ArrayDimensionSpecification();
-            arrayDimensionSpecification.setIndex(Integer.valueOf(i).shortValue());
-            arrayDimensionSpecification.setLenght(Integer.valueOf(getLength.get(i).findValue(Tokens.text).asInt()).shortValue());
-            arrayDimensionSpecificationList.add(i, arrayDimensionSpecification);
-        }
-        if (receivedArgument.findParent(Tokens.elementaryTypeName) != null) {
-            arraySpecification.setHasType(receivedArgument.findParent(Tokens.elementaryTypeName).findValue(Tokens.text).asText().toUpperCase());
-        } else {
-            arraySpecification.setHasType(receivedArgument.findParent(Tokens.userDefinedTypeName).findValue(Tokens.text).asText().toUpperCase());
-        }
-        arraySpecification.setHasArrayDimension(arrayDimensionSpecificationList);
-        return arraySpecification;
-    }
-
-    public NonConstantSpecification completeUserDefined(JsonNode receivedArgument) {
-        nonConstantSpecification = new NonConstantSpecification();
-        JsonNode typeAttribute = receivedArgument.findParent(Tokens.userDefinedTypeName);
-        String value = typeAttribute.findValue(Tokens.text).asText();
-        nonConstantSpecification.setNonConstantAttribute(value.toUpperCase());
-        return nonConstantSpecification;
-    }
-
-    public NonConstantSpecification completeUserDefinedAttribute(JsonNode receivedArgument) {
-        nonConstantSpecification = new NonConstantSpecification();
-        JsonNode typeAttribute = receivedArgument.findParent(Tokens.userDefinedTypeName);
-        List<JsonNode> value = typeAttribute.findValues(Tokens.text);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < value.size(); i++) {
-            if (i % 2 == 0 && value.get(i).asText().contains(".")) {
-                sb.append(value.get(i).asText());
-            } else if (value.get(i).asText().contains(" ")) {
-                i = value.size();
-            } else {
-                sb.append(value.get(i).asText());
-            }
-        }
-        nonConstantSpecification.setNonConstantAttribute(sb.toString().toUpperCase());
-        return nonConstantSpecification;
-    }
-
-    public AttributeSpecification solidityStructAttributes(JsonNode structDefinition) {
-        structSpecification = new StructSpecification();
-        attributeSpecification = new AttributeSpecification();
-        ArrayList<AttributeSpecification> toIntroduce = new ArrayList<>();
-        List<JsonNode> structAttributes = structDefinition.findParents(Tokens.variableDeclaration);
-        for (int i = 0; i < structAttributes.size(); i++) {
-            String attributeType = defineAttributeType(structAttributes.get(i));
-            if (attributeType.contentEquals("Array")) {
-            } else if (attributeType.contentEquals("NonConstantAttribute")) {
-                attributeSpecification.setHasName(structAttributes.get(i).findParent(Tokens.identifier).findValue(Tokens.text).asText());
-                attributeSpecification.setHasNonConstantAttribute(completeNonConstantAttribute(structAttributes, i));
-            }
-            toIntroduce.add(i, attributeSpecification);
-            attributeSpecification = new AttributeSpecification();
-        }
-        structSpecification.setHasAttributesTest(toIntroduce);
-        attributeSpecification = new AttributeSpecification();
-        attributeSpecification.setHasName(structDefinition.findParent(Tokens.identifier).findValue(Tokens.text).asText());
-        attributeSpecification.setHasStructType(structSpecification);
-        return attributeSpecification;
-    }
-
-    public NonConstantSpecification completeNonConstantAttribute(List<JsonNode> receivedArgument, int i) {
-        JsonNode typeAttribute = receivedArgument.get(i).findParent(Tokens.elementaryTypeName);
-        String value = typeAttribute.findValue(Tokens.text).asText();
-        String[] valueSplit = value.split("(?<=\\D)(?=\\d)");
-        nonConstantSpecification = new NonConstantSpecification();
-        if (valueSplit[0].matches("uint|int|bytes|byte")) {
-            nonConstantSpecification.setNonConstantAttribute(attributeTypeName(receivedArgument, i));
-        } else if (valueSplit[0].matches("ufixed|fixed")) {
-            nonConstantSpecification.setNonConstantAttribute(attributeTypeName(receivedArgument, i));
-        } else if (valueSplit[0].matches("address|bool|string")) {
-            elementaryTypeSpecification = new ElementaryTypeSpecification();
-            elementaryTypeSpecification.setElementaryType(ElementaryType.valueOf(valueSplit[0].toUpperCase()));
-            nonConstantSpecification.setNonConstantAttribute(elementaryTypeSpecification);
-        } else {
-            completeUserDefinedAttribute(receivedArgument.get(i));
-        }
-        return nonConstantSpecification;
-    }
-
-    public MemoryTypeSpecification attributeTypeName(List<JsonNode> jsonNode, int number) {
-        JsonNode typeAttribute = jsonNode.get(number).findParent(Tokens.elementaryTypeName);
-        elementaryTypeName = new MemoryTypeSpecification();
-        if (Stream.of(Tokens.singleMemoryTypes[0], Tokens.singleMemoryTypes[1], Tokens.singleMemoryTypes[2], Tokens.singleMemoryTypes[3]).anyMatch(typeAttribute.findValue(Tokens.text).asText()::contains)) {
-            singleMemoryTypeSpecification = new SingleMemoryTypeSpecification();
-            String value = typeAttribute.findValue(Tokens.text).asText();
-            if (value.contentEquals("byte")) {
-                value = "bytes1";
-            }
-            String[] valueSplit = value.split("(?<=\\D)(?=\\d)");
-            if (valueSplit.length > 1) {
-                singleMemoryTypeSpecification.setMemory(Short.valueOf(valueSplit[1]));
-            } else {
-                singleMemoryTypeSpecification.setMemory(Short.valueOf("256"));
-                if (valueSplit[0].contentEquals("bytes")) {
-                    singleMemoryTypeSpecification.setMemory(Short.valueOf("32"));
-                }
-            }
-            singleMemoryTypeSpecification.setType(SingleType.valueOf(valueSplit[0].toUpperCase()));
-            elementaryTypeName.setSingleMemoryType(singleMemoryTypeSpecification);
-        } else {
-            dualMemoryTypeSpecification = new DualMemoryTypeSpecification();
-            String value = typeAttribute.findValue(Tokens.text).asText();
-            String[] valueSplit = value.split("(?<=\\D)(?=\\d)");
-            dualMemoryTypeSpecification.setType(DualType.valueOf(valueSplit[0].toUpperCase()));
-            dualMemoryTypeSpecification.setMemoryN(Short.valueOf(valueSplit[1].substring(0, valueSplit[1].length() - 1)));
-            dualMemoryTypeSpecification.setMemoryM(Short.valueOf(valueSplit[2]));
-            elementaryTypeName.setDualMemoryType(dualMemoryTypeSpecification);
-        }
-        return elementaryTypeName;
-    }
-
-    public void solidityFunctions(JsonArray entireContract) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(entireContract.toString());
-            List<JsonNode> functionValue = jsonNode.findParents(Tokens.functionDefinition);
-            for (int i = 0; i < functionValue.size(); i++) {
-                functionSpecification = new FunctionSpecification();
-                parameterSpecificationList = new ArrayList<>();
-                List<JsonNode> functionDescriptor = jsonNode.findParents(Tokens.functionDescriptor);
-                if (functionDescriptor.get(i).findValue(Tokens.text).asText().contentEquals(Tokens.function)) {
-                    functionSpecification.setHasFunctionName(getFunctionName(functionDescriptor, i));
-                    List<JsonNode> codeValue = functionValue.get(i).findParents(Tokens.statement);
-                    functionSpecification.setHasCode(getCode(codeValue, i));
-                    List<JsonNode> modifierValue = jsonNode.findParents(Tokens.modifierList);
-                    functionSpecification.setVisibility(VisibilitySpecification.valueOf(getVisibility(modifierValue.get(i)).toUpperCase()));
-                    if (getMutability(modifierValue, i) != null) {
-                        functionSpecification.setHasFunctionBehaviour(getMutability(modifierValue, i));
-                    }
-                    JsonNode parameterValues = functionValue.get(i).findParent(Tokens.parametersList);
-                    functionSpecification.setParamSpecification(solidityParameters(parameterValues));
-                    JsonNode parameterReturnValues = functionValue.get(i).findParent(Tokens.returnParameters);
-                    functionSpecification.setReturnParamSpecification(solidityParameters(parameterReturnValues));
-                    functionSpecificationList.add(functionSpecification);
-                }
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void solidityModifiers(JsonArray entireContract) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(entireContract.toString());
-            List<JsonNode> modifierValue = jsonNode.findParents(Tokens.modifierDefinition);
-            for (int i = 0; i < modifierValue.size(); i++) {
-                modifierSpecification = new ModifierSpecification();
-                modifierSpecification.setHasModifierName(getModifierName(modifierValue, i));
-                List<JsonNode> codeValue = modifierValue.get(i).findParents(Tokens.statement);
-                modifierSpecification.setHasCode(getCode(codeValue, i));
-                JsonNode parameterValues = modifierValue.get(i).findParent(Tokens.parametersList);
-                modifierSpecification.setHasModifierArguments(solidityParameters(parameterValues));
-                modifierSpecificationList.add(i, modifierSpecification);
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void solidityEvents(JsonArray entireContract) {
-        JsonNode jsonNode;
-        try {
-            jsonNode = new ObjectMapper().readTree(entireContract.toString());
-            List<JsonNode> eventValue = jsonNode.findParents(Tokens.eventDefinition);
-            for (int i = 0; i < eventValue.size(); i++) {
-                eventSpecification = new EventSpecification();
-                eventSpecification.setHasEventName(getModifierName(eventValue, i));
-                JsonNode parameterValues = eventValue.get(i).findParent(Tokens.eventParametersList);
-                eventSpecification.setHasEventArguments(solidityEventParameters(parameterValues));
-                List<JsonNode> checkAnonymous = eventValue.get(i).findValues(Tokens.text);
-                if (checkAnonymous.get(checkAnonymous.size() - 2).asText().contentEquals(Tokens.ANONYMOUS)) {
-                    eventSpecification.setAnonymous(true);
-                }
-                eventSpecificationList.add(i, eventSpecification);
-            }
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public ArrayList<ParameterSpecification> solidityParameters(JsonNode jsonNode) {
-        parameterSpecificationList = new ArrayList<>();
-        if (jsonNode != null) {
-            List<JsonNode> parameter = jsonNode.findParents(Tokens.parameters);
-            for (int i = 0; i < parameter.size(); i++) {
-                parameterSpecification = new ParameterSpecification();
-                JsonNode userDefinedTypeParameter = parameter.get(i).findParent(Tokens.userDefinedTypeName);
-                JsonNode elementaryTypeParameter = parameter.get(i).findParent(Tokens.elementaryTypeName);
-                if (userDefinedTypeParameter != null) {
-                    JsonNode identifierParameter = parameter.get(i).findParent(Tokens.identifier);
-                    parameterSpecification.setUserParameterType(identifierParameter.findValue(Tokens.text).asText());
-                    if (parameter.get(i).findParents(Tokens.identifier).size() > 1) {
-                        JsonNode identifierParameterName = parameter.get(i).findParents(Tokens.identifier).get(1);
-                        parameterSpecification.setHasParameterName(identifierParameterName.findValue(Tokens.text).asText());
-                    }
-                } else {
-                    String[] elementaryType = splitElementaryType(elementaryTypeParameter.findValue(Tokens.text).asText());
-                    parameterSpecification = setMemoryTypes(elementaryType);
-                    if (parameter.get(i).findParent(Tokens.identifier) != null) {
-                        JsonNode identifierParameter = parameter.get(i).findParent(Tokens.identifier);
-                        parameterSpecification.setHasParameterName(identifierParameter.findValue(Tokens.text).asText());
-                    }
-                }
-                if (parameter.get(i).findParents(Tokens.text).size() > 1) {
-                    if (EnumUtils.isValidEnum(DataLocation.class, parameter.get(i).findParents(Tokens.text).get(1).findValue(Tokens.text).asText().toUpperCase())) {
-                        parameterSpecification.setHasParameterTypeWithDataLocation(DataLocation.valueOf(parameter.get(i).findParents(Tokens.text).get(1).findValue(Tokens.text).asText().toUpperCase()));
-                    }
-                }
-                parameterSpecification.setHasParameterPosition(Integer.valueOf(i).shortValue());
-                parameterSpecificationList.add(i, parameterSpecification);
-            }
-        }
-        return parameterSpecificationList;
-    }
-
-    public ParameterSpecification setMemoryTypes(String[] elementaryType) {
-        parameterSpecification = new ParameterSpecification();
-        singleMemoryTypeSpecification = new SingleMemoryTypeSpecification();
-        if (elementaryType[0].toUpperCase().contentEquals("BYTE")) {
-            elementaryType = new String[2];
-            elementaryType[0] = "BYTES";
-            elementaryType[1] = "1";
-        }
-        if (checkElementaryType(elementaryType[0]) == 1) {
-            singleMemoryTypeSpecification.setType(SingleType.valueOf(elementaryType[0].toUpperCase()));
-            if (elementaryType.length > 1) {
-                singleMemoryTypeSpecification.setMemory(Short.valueOf(elementaryType[1]));
-            } else {
-                singleMemoryTypeSpecification.setMemory(Short.valueOf("256"));
-            }
-            parameterSpecification.setMemoryType(singleMemoryTypeSpecification);
-        } else if (checkElementaryType(elementaryType[0]) == 2) {
-            dualMemoryTypeSpecification = new DualMemoryTypeSpecification();
-            dualMemoryTypeSpecification.setType(DualType.valueOf(elementaryType[0].toUpperCase()));
-            dualMemoryTypeSpecification.setMemoryN(Short.valueOf(elementaryType[1].substring(0, elementaryType[1].length() - 1)));
-            dualMemoryTypeSpecification.setMemoryM(Short.valueOf(elementaryType[2]));
-            parameterSpecification.setDualMemoryType(dualMemoryTypeSpecification);
-        } else if (checkElementaryType(elementaryType[0]) == 3) {
-            singleMemoryTypeSpecification.setType(SingleType.valueOf(elementaryType[0].toUpperCase()));
-            if (elementaryType.length > 1) {
-                singleMemoryTypeSpecification.setMemory(Short.valueOf(elementaryType[1]));
-            } else {
-                singleMemoryTypeSpecification.setMemory(Short.valueOf("32"));
-            }
-            parameterSpecification.setMemoryType(singleMemoryTypeSpecification);
-        } else {
-            elementaryTypeSpecification = new ElementaryTypeSpecification();
-            elementaryTypeSpecification.setElementaryType(ElementaryType.valueOf(elementaryType[0].toUpperCase()));
-            parameterSpecification.setElementaryType(elementaryTypeSpecification);
-        }
-        return parameterSpecification;
-    }
-
-    public ArrayList<ParameterSpecification> solidityEventParameters(JsonNode jsonNode) {
-        parameterSpecificationList = new ArrayList<>();
-        List<JsonNode> parameter = jsonNode.findParents(Tokens.eventParameters);
-        for (int i = 0; i < parameter.size(); i++) {
-            parameterSpecification = new ParameterSpecification();
-            JsonNode elementaryTypeParameter = parameter.get(i).findParent(Tokens.elementaryTypeName);
-            if (elementaryTypeParameter == null) {
-                elementaryTypeParameter = parameter.get(i).findParent(Tokens.userDefinedTypeName);
-                JsonNode identifierParameter = parameter.get(i).findParents(Tokens.identifier).get(1);
-                parameterSpecification.setHasParameterName(identifierParameter.findValue(Tokens.text).asText());
-                parameterSpecification.setHasParameterPosition(Integer.valueOf(i).shortValue());
-                parameterSpecification.setUserParameterType(elementaryTypeParameter.findValue(Tokens.text).asText());
-                parameterSpecificationList.add(i, parameterSpecification);
-            } else {
-                String[] elementaryType = splitElementaryType(elementaryTypeParameter.findValue(Tokens.text).asText());
-                parameterSpecification = setMemoryTypes(elementaryType);
-                if (parameter.get(i).findParent(Tokens.identifier) != null) {
-                    JsonNode identifierParameter = parameter.get(i).findParent(Tokens.identifier);
-                    parameterSpecification.setHasParameterName(identifierParameter.findValue(Tokens.text).asText());
-                }
-                if (parameter.get(i).findParents(Tokens.text).size() > 1) {
-                    if (EnumUtils.isValidEnum(DataLocation.class, parameter.get(i).findParents(Tokens.text).get(1).findValue(Tokens.text).asText().toUpperCase())) {
-                        parameterSpecification.setHasParameterTypeWithDataLocation(DataLocation.valueOf(parameter.get(i).findParents(Tokens.text).get(1).findValue(Tokens.text).asText().toUpperCase()));
-                    }
-                }
-                parameterSpecification.setHasParameterPosition(Integer.valueOf(i).shortValue());
-                parameterSpecificationList.add(i, parameterSpecification);
-            }
-        }
-        return parameterSpecificationList;
-    }
-
-    private int checkElementaryType(String type) {
-        type = type.toUpperCase();
-        if (type.contains("UINT") || type.contains("INT")) {
-            return 1;
-        } else if (type.contains("UFIXED")) {
-            return 2;
-        } else if (type.contains("BYTES")) {
-            return 3;
-        } else {
-            return 4;
-        }
-    }
-
-    public String getFunctionName(List<JsonNode> jsonNode, int number) {
-        String name = "";
-        List<String> functionValues = jsonNode.get(number).findValuesAsText(Tokens.text);
-        for (int j = 0; j < functionValues.size(); j++) {
-            if (!functionValues.get(j).contentEquals(Tokens.function)) {
-                name = functionValues.get(j);
-            }
-        }
-        return name;
-    }
-
-    private String getModifierName(List<JsonNode> modifierValue, int i) {
-        String name = "";
-        JsonNode nameModifier = modifierValue.get(i).findParent(Tokens.identifier);
-        List<String> functionValues = nameModifier.findValuesAsText(Tokens.text);
-        for (int j = 0; j < functionValues.size(); j++) {
-            if (!functionValues.get(j).contentEquals(Tokens.function)) {
-                name = functionValues.get(j);
-            }
-        }
-        return name;
-    }
-
-    public String getCode(List<JsonNode> jsonNode, int number) {
-        StringBuilder code = new StringBuilder();
-        for (int i = 0; i < jsonNode.size(); i++) {
-            List<String> codeValue = jsonNode.get(i).findValuesAsText(Tokens.text);
-            for (int j = 0; j < codeValue.size(); j++) {
-                code.append(codeValue.get(j)).append(" ");
-            }
-        }
-        return code.toString();
-    }
-
-    public String getVisibility(JsonNode jsonNode) {
-        List<String> visibilityValue = jsonNode.findValuesAsText(Tokens.text);
-        String visibility = "INTERNAL";
-        for (int j = 0; j < visibilityValue.size(); j++) {
-            if (Stream.of(Tokens.visibility[0], Tokens.visibility[1], Tokens.visibility[2], Tokens.visibility[3]).anyMatch(visibilityValue.get(j)::contentEquals) && visibilityValue.get(j) != null) {
-                visibility = visibilityValue.get(j);
-            }
-        }
-        return visibility;
-    }
-
-    public ArrayList<Object> getMutability(List<JsonNode> jsonNode, int number) {
-        List<String> mutabilityValue = jsonNode.get(number).findValuesAsText(Tokens.text);
-        String mutability;
-        ArrayList<Object> mutabilityParam = new ArrayList<>();
-        for (int j = 0; j < mutabilityValue.size(); j++) {
-            if (!Stream.of(Tokens.visibility[0], Tokens.visibility[1], Tokens.visibility[2], Tokens.visibility[3]).anyMatch(mutabilityValue.get(j)::contains)) {
-                mutability = mutabilityValue.get(j);
-                if (!Stream.of("(", ")").anyMatch(mutability::contains)) {
-                    mutabilityParam.add(mutability.toUpperCase());
-                }
-            }
-        }
-        return mutabilityParam;
-    }
-
-    public String[] splitElementaryType(String parameterType) {
-        return parameterType.split("(?<=\\D)(?=\\d)");
     }
 }

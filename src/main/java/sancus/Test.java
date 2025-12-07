@@ -98,7 +98,7 @@ public class Test {
 		try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(Paths.get(directoryPath))) {
 			for (Path path : directoryStream) {
 				if (!Files.isDirectory(path)) {
-					if(path.getFileName().toString().contentEquals("0x00000000000000adc04c56bf30ac9d3c0aaf14dc.sol")) {
+					if(path.getFileName().toString().contentEquals("Contract.sol")) {
 						JsonElement jsonElementOr = JsonParser.parseString(checkIsJSONandModify(readFile(path.toString(), StandardCharsets.UTF_8)));
 						String resultProcess = checkContractJSONsources(jsonElementOr);
 						JsonObject contractAntlrFormat = SolidityToJSONParser.contractJsonObject(resultProcess);
