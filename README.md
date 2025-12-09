@@ -44,7 +44,7 @@ A folder called "target" will be created containing the compiled  _jar_  and a f
 
 ## Requirements
 
-- **Java 
+- **Java** 
 - **Maven 3+**  
 - For blocks, access to an Ethereum node (local or provider). For ABI or Solidity smart contract, access to a third party service.
 
