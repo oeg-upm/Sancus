@@ -6,11 +6,23 @@
 
 ## Ethereum block retriever
 
-The **Ethereum Block Retriever** is a component that fetches metadata from Ethereum blocks and lists their transactions. It gathers basic information like block number and transaction hashes.
+The **Ethereum Block Retriever** is a component that fetches metadata from Ethereum blocks and lists their transactions. It gathers basic information like block number and transaction hashes such as:
+- Block number  
+- Transaction hashes  
+- Timestamp  
+- Basic block-related metadata  
+
+
 
 ## ABI contract retriever
 
-The **ABI Contract Retriever** is a component that extracts and provides the Application Binary Interface (ABI) of smart contracts on the Ethereum blockchain. It focuses on retrieving the essential interface information that defines how to interact with these contracts.
+The **ABI Contract Retriever** is a component that extracts and provides the Application Binary Interface (ABI) of smart contracts on the Ethereum blockchain. It focuses on retrieving the essential interface information that defines how to interact with these contracts, providing:
+- Contract functions  
+- Events  
+- Parameter types  
+- Structural interaction definitions  
+
+This module enables the conversion of contract specifications into semantic vocabularies.
 
 ## Solidity contract retriever
 
@@ -28,4 +40,13 @@ To complile the  _jar_  run the following command:
 mvn clean package -DskipTests
 ```
 A folder called "target" will be created containing the compiled  _jar_  and a folder with dependencies.
+
+
+## Requirements
+
+- **Java 17+** (or the version your project uses—tell me if you want it adjusted)  
+- **Maven 3+**  
+- For blocks, access to an Ethereum node (local or provider). For ABI or Solidity smart contract, access to a third party service.
+
+
 
