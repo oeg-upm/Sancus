@@ -16,7 +16,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
-public class JsonParserToJSONOnto {
+public class SolidityToRDF {
 
     private JsonArray namesContract = new JsonArray();
 

@@ -8,13 +8,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import sancus.model.BlockchainSmartContract;
-import solidity.provider.JsonParserToJSONOnto;
+import solidity.provider.SolidityToRDF;
 import solidity.provider.SmartContractChainAnalyser;
 
 @Service
 public class TranslationRestService {
 	
-	private JsonParserToJSONOnto jsonldContract = new JsonParserToJSONOnto();
+	private SolidityToRDF jsonldContract = new SolidityToRDF();
 	private SmartContractChainAnalyser scca = new SmartContractChainAnalyser();
 
 
