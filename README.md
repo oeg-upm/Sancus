@@ -67,8 +67,6 @@ Sancus requires two API keys to interact with Ethereum:
 
 Keys can also be provided via command-line arguments: `--ethkey="..." --etherscankey="..."`
 
-> **Note:** `keys.json` is listed in `.gitignore` and will not be committed to the repository.
-
 ## Running the Demo
 
 To launch Sancus in demo mode, which provides an interactive web interface for exploring the Ethereum blockchain:
