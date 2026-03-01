@@ -2,28 +2,39 @@ package ethereum.provider;
 
 import java.io.IOException;
 import java.math.BigInteger;
+
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
 
 import ethereum.model.ChainExtractorModel;
+import sancus.Keys;
 
 public class EthereumDataProvider {
 
-	private EthereumBlockExtractor results = new EthereumBlockExtractor();
 	public static Web3jConnector web3j = new Web3jConnector();
+	private EthereumBlockExtractor results = new EthereumBlockExtractor();
 
 	public String retrieveBlock(ChainExtractorModel block) {
 		try {
-			String result = null;
-			if(block.getUrl() != null) {
-				web3j.setConnection(Web3j.build(new HttpService(block.getUrl())));
+			String url = block.getUrl();
+			// Use default key from Keys if no URL is provided
+			if (url == null || url.isEmpty()) {
+				url = Keys.getEthKey();
 			}
-			result =results.BlockhainExtractor(BigInteger.valueOf(block.getBlock()));
+			if (url != null && !url.isEmpty()) {
+				web3j.setConnection(Web3j.build(new HttpService(url)));
+			} else {
+				throw new IOException("No Ethereum endpoint URL configured. Use --ethkey=\"...\" to set one.");
+			}
+			String result = results.BlockhainExtractor(BigInteger.valueOf(block.getBlock()));
 			return result;
 		} catch (IOException e) {
 			e.printStackTrace();
+			return "{\"error\": \"" + e.getMessage() + "\"}";
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "{\"error\": \"" + e.getMessage() + "\"}";
 		}
-		return "[\"result\": \"error\"]";
 	}
 
 }

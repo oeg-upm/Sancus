@@ -48,5 +48,40 @@ A folder called "target" will be created containing the compiled  _jar_  and a f
 - **Maven 3+**  
 - For blocks, access to an Ethereum node (local or provider). For ABI or Solidity smart contract, access to a third party service.
 
+## API Keys Configuration
 
+Sancus requires two API keys to interact with Ethereum:
 
+1. Create a `keys.json` file in the project root directory:
+
+```json
+{
+    "ethKey": "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
+    "etherscanKey": "YOUR_ETHERSCAN_API_KEY"
+}
+```
+
+2. Replace the placeholder values with your actual keys:
+   - **ethKey**: An Ethereum node endpoint (e.g. from [Infura](https://infura.io))
+   - **etherscanKey**: An API key from [Etherscan](https://etherscan.io/apis)
+
+Keys can also be provided via command-line arguments: `--ethkey="..." --etherscankey="..."`
+
+> **Note:** `keys.json` is listed in `.gitignore` and will not be committed to the repository.
+
+## Running the Demo
+
+To launch Sancus in demo mode, which provides an interactive web interface for exploring the Ethereum blockchain:
+
+```
+java -jar target/sancus.jar --demo
+```
+
+Or run `SancusProjectApplication.java` with the `--demo` argument from your IDE.
+
+The demo will be available at [http://localhost:80](http://localhost:80). From the web interface you can:
+
+- Enter any Ethereum block number to retrieve its data as RDF
+- Discover smart contracts deployed in that block
+- Obtain semantic representations of contract ABIs and Solidity source code
+- Select different RDF serialisation formats

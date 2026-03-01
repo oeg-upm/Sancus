@@ -26,8 +26,9 @@
                         <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                             <li class="nav-item"><a class="nav-link" href="index">Home</a></li>
                             <li class="active"><a class="nav-link" href="#">Documentation</a></li>
-                            <li class="nav-item"><a class="nav-link" target=”_blank” href="/swagger-ui.html">REST-API</a></li>
-                            <li class="nav-item"><a class="nav-link" target=”_blank” href="http://kg.dlt.linkeddata.es/">Triple Store</a></li>
+                            <li class="nav-item" th:if="${demoMode}"><a class="nav-link" href="demo">Demo</a></li>
+                            <li class="nav-item"><a class="nav-link" target="_blank" href="/swagger-ui.html">REST-API</a></li>
+                            <li class="nav-item" th:unless="${demoMode}"><a class="nav-link" target="_blank" href="http://kg.dlt.linkeddata.es/">Triple Store</a></li>
                         </ul>
                     </div>
                 </div>
@@ -179,13 +180,17 @@
         <footer class="bg-dark py-4 mt-auto">
             <div class="container px-5">
                 <div class="row align-items-center justify-content-between flex-column flex-sm-row">
-                
-
-                    <div class="col-auto"><div class="small m-0 text-white">Juan Cano de Benito, Andrea Cimmino Arriaga, and Raúl García Castro</div>
-					<div class="small m-0 text-white">Contact email: jcano@fi.upm.es, cimmino@fi.upm.es, or rgarcia@fi.upm.es</div>
-					<div class="small m-0 text-white">Built with Bootstrap</div></div>
                     <div class="col-auto">
-                        <a class="text-white">© Ontology Engineering Group</a>
+                        <div class="small m-0 text-white">Authors</div>
+                        <div class="small m-0 text-white">Juan Cano de Benito, Andrea Cimmino, Sven Hertling, Heiko Paulheim, Raúl García Castro</div>
+                        <div class="small m-0 text-white mt-2">Contact</div>
+                        <div class="small m-0 text-white">juan.cano.de.benito@uni-mannheim.de · andreajesus.cimmino@upm.es · sven.hertling@uni-mannheim.de · heiko.paulheim@uni-mannheim.de · r.garcia@upm.es</div>
+                        <div class="small m-0 text-muted mt-2">Built with Bootstrap</div>
+                    </div>
+                    <div class="col-auto text-end">
+                        <div class="small m-0 text-white">Affiliation</div>
+                        <div class="small m-0 text-white">Data and Web Science Group</div>
+                        <div class="small m-0 text-white">University of Mannheim</div>
                     </div>
                 </div>
             </div>

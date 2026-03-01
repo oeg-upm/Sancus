@@ -2,16 +2,16 @@ package ethereum.provider;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.web3j.protocol.core.DefaultBlockParameter;
 import org.web3j.protocol.core.methods.response.AccessListObject;
-import org.web3j.protocol.core.methods.response.Transaction;
 import org.web3j.protocol.core.methods.response.EthBlock.Block;
 import org.web3j.protocol.core.methods.response.EthBlock.TransactionResult;
 import org.web3j.protocol.core.methods.response.EthBlock.Withdrawal;
-import java.util.UUID;
+import org.web3j.protocol.core.methods.response.Transaction;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -44,7 +44,7 @@ public class EthereumBlockExtractor {
 		try {
 			blockJson.addProperty("baseFeePerGas", block.getBaseFeePerGas());
 		}catch (Exception e) {}
-		blockJson.addProperty("difficulty", block.getDifficulty());
+		try { blockJson.addProperty("difficulty", block.getDifficulty()); } catch (Exception e) {}
 		blockJson.addProperty("extraData", block.getExtraData());
 		blockJson.addProperty("gasLimit", block.getGasLimit());
 		blockJson.addProperty("gasUsed", block.getGasUsed());
@@ -52,7 +52,7 @@ public class EthereumBlockExtractor {
 		blockJson.addProperty("logsBloom", block.getLogsBloom());
 		blockJson.addProperty("miner", block.getMiner());
 		blockJson.addProperty("mixHash", block.getMixHash());
-		blockJson.addProperty("nonce", block.getNonce());
+		try { blockJson.addProperty("nonce", block.getNonce()); } catch (Exception e) {}
 		blockJson.addProperty("number", block.getNumber());
 		blockJson.addProperty("parentHash", block.getParentHash());
 		blockJson.addProperty("receiptsRoot", block.getReceiptsRoot());
@@ -60,9 +60,9 @@ public class EthereumBlockExtractor {
 		blockJson.addProperty("size", block.getSize());
 		blockJson.addProperty("stateRoot", block.getStateRoot());
 		blockJson.addProperty("timestamp", block.getTimestamp());
-		blockJson.addProperty("totalDifficulty", block.getTotalDifficulty());
+		try { blockJson.addProperty("totalDifficulty", block.getTotalDifficulty()); } catch (Exception e) {}
 		blockJson.addProperty("transactionsRoot", block.getTransactionsRoot());	
-		blockJson.addProperty("withdrawalsRoot", block.getWithdrawalsRoot());	
+		try { blockJson.addProperty("withdrawalsRoot", block.getWithdrawalsRoot()); } catch (Exception e) {}	
 		for(int j=0; j<block.getTransactions().size(); j++) {
 			TransactionResult<Transaction> tr = block.getTransactions().get(j);
 			JsonArray accessListArray = new JsonArray();
