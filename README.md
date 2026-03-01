@@ -2,7 +2,7 @@
 
 **Sancus** is a software that offers semantic representations of the Ethereum blockchain using web semantic formats like JSON-LD 1.1. It focuses on translating Ethereum's blockchain data to semantic web languages.
 
-[Webpage](https://dlt.linkeddata.es)
+[Webpage](https://ethereumkg.informatik.uni-mannheim.de/)
 
 ## Ethereum block retriever
 
